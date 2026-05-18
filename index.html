@@ -1,0 +1,2015 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Estudar Francês — Apostila Interativa</title>
+<style>
+  :root{
+    --bleu:#0055A4; --rouge:#EF4135; --blanc:#FFFFFF;
+    --bg:#f7f7fb; --ink:#1a1a2e; --muted:#6b7280; --card:#ffffff;
+    --accent:#0055A4; --good:#15803d; --bad:#b91c1c; --warn:#b45309;
+    --border:#e5e7eb;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5}
+  header{background:linear-gradient(90deg,#0055A4,#1d4ed8,#EF4135);color:#fff;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+  header h1{margin:0;font-size:1.2rem;font-weight:700;letter-spacing:.3px}
+  header h1 span{opacity:.85;font-weight:400;font-size:.9rem;margin-left:8px}
+  .modes{display:flex;gap:6px;background:rgba(255,255,255,.15);padding:4px;border-radius:10px}
+  .modes button{background:transparent;border:0;color:#fff;padding:8px 12px;border-radius:7px;cursor:pointer;font-weight:600;font-size:.85rem}
+  .modes button.active{background:#fff;color:var(--bleu)}
+  .layout{display:grid;grid-template-columns:280px 1fr;min-height:calc(100vh - 68px)}
+  aside{background:#fff;border-right:1px solid var(--border);overflow-y:auto;max-height:calc(100vh - 68px);position:sticky;top:0}
+  .search{padding:12px;border-bottom:1px solid var(--border);position:sticky;top:0;background:#fff;z-index:5}
+  .search input{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:.9rem}
+  .module-block{padding:6px 0}
+  .module-title{padding:10px 14px 4px;font-size:.75rem;font-weight:700;color:var(--bleu);text-transform:uppercase;letter-spacing:.6px}
+  .lesson-item{padding:8px 14px;cursor:pointer;font-size:.85rem;border-left:3px solid transparent;display:flex;justify-content:space-between;gap:8px;align-items:center}
+  .lesson-item:hover{background:#f3f4f6}
+  .lesson-item.active{background:#eff6ff;border-left-color:var(--bleu);font-weight:600;color:var(--bleu)}
+  .lesson-num{color:var(--muted);font-size:.75rem;flex-shrink:0}
+  main{padding:24px 32px;overflow-x:hidden;max-width:100%}
+  .lesson-header{margin-bottom:20px}
+  .lesson-header .crumb{font-size:.8rem;color:var(--muted)}
+  .lesson-header h2{margin:6px 0 4px;font-size:1.5rem;color:var(--bleu)}
+  .lesson-header .fr{color:var(--muted);font-style:italic}
+  section{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px 22px;margin-bottom:16px;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+  section h3{margin:0 0 12px;color:var(--bleu);font-size:1.05rem;display:flex;align-items:center;gap:8px}
+  section h3::before{content:"";width:4px;height:18px;background:var(--rouge);border-radius:2px}
+  .grammar{font-size:.95rem}
+  .grammar p{margin:8px 0}
+  .grammar ul{padding-left:18px;margin:8px 0}
+  .grammar li{margin:4px 0}
+  .grammar code, .ex-fr code{background:#fef3c7;padding:1px 6px;border-radius:4px;font-family:inherit;color:#92400e;font-weight:600}
+  table.conj{width:100%;border-collapse:collapse;font-size:.9rem;margin:6px 0}
+  table.conj th, table.conj td{padding:6px 10px;border:1px solid var(--border);text-align:left}
+  table.conj th{background:#f3f4f6;font-weight:600;width:30%}
+  table.conj td.fr{color:var(--bleu);font-weight:600}
+  .conj-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+  .conj-card{border:1px solid var(--border);border-radius:10px;padding:12px 14px;background:#fafbff}
+  .conj-card .verb{font-weight:700;color:var(--rouge);font-size:1rem}
+  .conj-card .meaning{color:var(--muted);font-size:.8rem;margin-bottom:6px}
+  .conj-card table{font-size:.85rem;width:100%;border-collapse:collapse}
+  .conj-card td{padding:3px 4px}
+  .conj-card td:first-child{color:var(--muted);width:35%}
+  .conj-card td:last-child{font-weight:600;color:var(--bleu)}
+  .vocab-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+  .vocab-item{background:#fafbff;border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:.9rem}
+  .vocab-item .fr{font-weight:600;color:var(--bleu)}
+  .vocab-item .pt{color:var(--ink);opacity:.85;font-size:.85rem}
+  .examples{display:flex;flex-direction:column;gap:8px}
+  .example{padding:10px 14px;background:#fafbff;border-left:3px solid var(--bleu);border-radius:0 8px 8px 0}
+  .example .ex-fr{font-weight:500}
+  .example .ex-pt{color:var(--muted);font-size:.85rem;margin-top:3px}
+  /* Quiz */
+  .quiz-q{margin-bottom:16px;padding:14px;background:#fafbff;border-radius:10px;border:1px solid var(--border)}
+  .quiz-q .q-text{font-weight:600;margin-bottom:10px}
+  .quiz-q .options{display:flex;flex-direction:column;gap:6px}
+  .quiz-q .opt{padding:8px 12px;background:#fff;border:1px solid var(--border);border-radius:7px;cursor:pointer;font-size:.9rem;transition:.15s;text-align:left;width:100%}
+  .quiz-q .opt:hover{border-color:var(--bleu);background:#eff6ff}
+  .quiz-q .opt.correct{background:#dcfce7;border-color:var(--good);color:var(--good);font-weight:600}
+  .quiz-q .opt.wrong{background:#fee2e2;border-color:var(--bad);color:var(--bad)}
+  .quiz-q .explain{margin-top:8px;padding:8px 12px;background:#fffbeb;border-radius:6px;font-size:.85rem;color:#92400e;display:none}
+  .quiz-q.answered .explain{display:block}
+  .quiz-summary{padding:14px;background:linear-gradient(90deg,#0055A4,#1d4ed8);color:#fff;border-radius:10px;font-weight:600;margin-top:10px}
+  /* Flashcards */
+  .flash-wrap{display:flex;flex-direction:column;align-items:center;gap:16px;padding:20px 0}
+  .flashcard{width:100%;max-width:520px;height:240px;perspective:1200px;cursor:pointer}
+  .flash-inner{position:relative;width:100%;height:100%;transform-style:preserve-3d;transition:transform .5s}
+  .flashcard.flipped .flash-inner{transform:rotateY(180deg)}
+  .flash-face{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:14px;padding:24px;backface-visibility:hidden;text-align:center;box-shadow:0 6px 20px rgba(0,0,0,.08);border:1px solid var(--border)}
+  .flash-front{background:linear-gradient(135deg,#fff,#eff6ff)}
+  .flash-back{background:linear-gradient(135deg,#0055A4,#1d4ed8);color:#fff;transform:rotateY(180deg)}
+  .flash-face .word{font-size:1.8rem;font-weight:700}
+  .flash-face .hint{font-size:.85rem;opacity:.7;margin-top:8px}
+  .flash-back .word{color:#fff}
+  .flash-controls{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+  .btn{padding:9px 16px;border-radius:8px;border:1px solid var(--border);background:#fff;cursor:pointer;font-weight:600;font-size:.9rem}
+  .btn:hover{background:#f3f4f6}
+  .btn.primary{background:var(--bleu);color:#fff;border-color:var(--bleu)}
+  .btn.primary:hover{background:#003d7a}
+  .btn.danger{background:#fee2e2;color:var(--bad);border-color:#fecaca}
+  .btn.good{background:#dcfce7;color:var(--good);border-color:#bbf7d0}
+  .flash-progress{font-size:.85rem;color:var(--muted)}
+  .flash-filter{display:flex;align-items:center;gap:10px;font-size:.85rem;color:var(--muted);flex-wrap:wrap;justify-content:center}
+  .flash-filter select{padding:6px 10px;border:1px solid var(--border);border-radius:6px}
+  /* Conjugator */
+  .conj-test{max-width:600px;margin:0 auto}
+  .conj-prompt{font-size:1.2rem;text-align:center;padding:20px;background:#fff;border:1px solid var(--border);border-radius:12px;margin-bottom:14px}
+  .conj-prompt .verb-name{color:var(--rouge);font-weight:700}
+  .conj-prompt .pronoun{color:var(--bleu);font-weight:700}
+  .conj-input{width:100%;padding:14px;font-size:1.1rem;border:2px solid var(--border);border-radius:10px;text-align:center;margin-bottom:10px}
+  .conj-input:focus{outline:none;border-color:var(--bleu)}
+  .conj-feedback{padding:12px;border-radius:8px;margin-bottom:10px;text-align:center;font-weight:600;display:none}
+  .conj-feedback.ok{background:#dcfce7;color:var(--good);display:block}
+  .conj-feedback.ko{background:#fee2e2;color:var(--bad);display:block}
+  .conj-score{text-align:center;color:var(--muted);font-size:.9rem;margin-bottom:10px}
+  .verb-picker{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;justify-content:center}
+  .verb-picker label{padding:5px 10px;background:#fff;border:1px solid var(--border);border-radius:6px;font-size:.8rem;cursor:pointer}
+  .verb-picker input{margin-right:5px}
+  .verb-picker label.on{background:var(--bleu);color:#fff;border-color:var(--bleu)}
+  /* Responsive */
+  @media (max-width:900px){
+    .layout{grid-template-columns:1fr}
+    aside{position:fixed;top:68px;left:-100%;width:80%;max-width:300px;height:calc(100vh - 68px);z-index:50;transition:left .3s;box-shadow:2px 0 12px rgba(0,0,0,.1)}
+    aside.open{left:0}
+    main{padding:18px 16px}
+    .menu-toggle{display:inline-block}
+    header h1{font-size:1rem}
+    .conj-grid{grid-template-columns:1fr}
+  }
+  .menu-toggle{display:none;background:rgba(255,255,255,.15);border:0;color:#fff;padding:8px 12px;border-radius:7px;cursor:pointer;font-weight:600;font-size:.85rem}
+  @media (max-width:900px){.menu-toggle{display:inline-block}}
+  .empty{padding:40px;text-align:center;color:var(--muted)}
+  .tag{display:inline-block;padding:2px 8px;background:#eff6ff;color:var(--bleu);border-radius:10px;font-size:.7rem;font-weight:600;margin-left:6px}
+  .pron{color:var(--muted);font-size:.8rem;font-style:italic}
+</style>
+</head>
+<body>
+<header>
+  <h1>🇫🇷 Estudar Francês <span>— 52 leçons</span></h1>
+  <button class="menu-toggle" id="menuBtn">☰ Lições</button>
+  <div class="modes">
+    <button data-mode="learn" class="active">📖 Aprender</button>
+    <button data-mode="flash">🎴 Flashcards</button>
+    <button data-mode="quiz">❓ Quiz</button>
+    <button data-mode="conj">✍️ Conjugar</button>
+  </div>
+</header>
+<div class="layout">
+  <aside id="sidebar">
+    <div class="search"><input id="searchBox" placeholder="🔍 Procurar lição ou tópico..."></div>
+    <div id="lessonList"></div>
+  </aside>
+  <main id="mainContent"></main>
+</div>
+
+<script>
+// =====================================================
+// DADOS — 52 LIÇÕES
+// =====================================================
+const LESSONS = [
+  // ============ MODULE 1 ============
+  {
+    id:1, mod:1, t:"Pronomes sujeito · Presente do indicativo",
+    tFr:"Pronoms sujets. Présent de l'indicatif",
+    grammar:`<p><b>Pronomes pessoais sujeito</b> em francês:</p>
+    <ul>
+      <li><code>Je</code> = Eu (vira <code>J'</code> antes de vogal: <i>J'habite</i>)</li>
+      <li><code>Tu</code> = Tu / Você (informal)</li>
+      <li><code>Il / Elle / On</code> = Ele / Ela / A gente</li>
+      <li><code>Nous</code> = Nós · <code>Vous</code> = Vós/Vocês/Você formal</li>
+      <li><code>Ils / Elles</code> = Eles / Elas</li>
+    </ul>
+    <p><b>Verbos do 1º grupo (-ER)</b> — retiras o -ER e adicionas: <code>-e, -es, -e, -ons, -ez, -ent</code>. As terminações <i>-e, -es, -e, -ent</i> são silenciosas!</p>`,
+    conj:[
+      {v:"habiter", m:"morar", f:{je:"habite",tu:"habites",il:"habite",nous:"habitons",vous:"habitez",ils:"habitent"}},
+      {v:"parler", m:"falar", f:{je:"parle",tu:"parles",il:"parle",nous:"parlons",vous:"parlez",ils:"parlent"}},
+      {v:"voyager", m:"viajar", f:{je:"voyage",tu:"voyages",il:"voyage",nous:"voyageons",vous:"voyagez",ils:"voyagent"}}
+    ],
+    vocab:[
+      {fr:"habiter",pt:"morar"},{fr:"parler",pt:"falar"},{fr:"voyager",pt:"viajar"},
+      {fr:"souvent",pt:"frequentemente"},{fr:"aussi",pt:"também"},{fr:"français",pt:"francês"}
+    ],
+    ex:[
+      {fr:"J'habite à São Paulo.",pt:"Eu moro em São Paulo."},
+      {fr:"Tu parles français?",pt:"Você fala francês?"},
+      {fr:"Nous voyageons à Paris.",pt:"Nós viajamos a Paris."}
+    ],
+    quiz:[
+      {q:"Tu ____ français.",o:["parle","parles","parlez","parlent"],a:1,e:"Tu + verbo -ER leva sempre -es"},
+      {q:"J' ____ à Rome.",o:["habites","habite","habitons","habitent"],a:1,e:"Je → -e; antes de vogal vira J'"},
+      {q:"Elles ____ au Brésil.",o:["voyage","voyages","voyagez","voyagent"],a:3,e:"Ils/Elles → -ent (silencioso)"}
+    ]
+  },
+  {
+    id:2, mod:1, t:"Perguntas · Negação · Verbo ÊTRE",
+    tFr:"Poser une question. La négation. Verbe être",
+    grammar:`<p><b>Verbo ÊTRE (=ser/estar)</b> — irregular, decora!</p>
+    <p><b>Negação:</b> coloca-se <code>ne … pas</code> em torno do verbo. Antes de vogal, <code>ne</code> vira <code>n'</code>.<br>
+    <i>Je ne parle pas français.</i> · <i>Il n'est pas content.</i></p>
+    <p><b>Perguntas — 3 maneiras:</b></p>
+    <ul>
+      <li>Entonação: <i>Tu es français?</i> (informal)</li>
+      <li>Est-ce que: <i>Est-ce que tu es français?</i> (neutro)</li>
+      <li>Inversão: <i>Es-tu français?</i> (formal)</li>
+    </ul>`,
+    conj:[{v:"être", m:"ser/estar", f:{je:"suis",tu:"es",il:"est",nous:"sommes",vous:"êtes",ils:"sont"}}],
+    vocab:[
+      {fr:"content/contente",pt:"contente"},{fr:"heureux/heureuse",pt:"feliz"},
+      {fr:"intelligent(e)",pt:"inteligente"},{fr:"patient(e)",pt:"paciente"},
+      {fr:"gentil(le)",pt:"gentil"},{fr:"marié(e)",pt:"casado(a)"},
+      {fr:"célibataire",pt:"solteiro(a)"},{fr:"divorcé(e)",pt:"divorciado(a)"}
+    ],
+    ex:[
+      {fr:"Je ne suis pas français.",pt:"Eu não sou francês."},
+      {fr:"Est-ce que vous êtes contents?",pt:"Vocês estão contentes?"},
+      {fr:"Nous sommes en vacances.",pt:"Estamos de férias."}
+    ],
+    quiz:[
+      {q:"Nous ____ heureux.",o:["sont","sommes","êtes","est"],a:1,e:"Nous sommes"},
+      {q:"Negativo de \"Il parle italien\":",o:["Il pas parle italien","Il parle ne pas italien","Il ne parle pas italien","Il n'parle pas italien"],a:2,e:"ne + verbo + pas"},
+      {q:"Vous ____ professeurs?",o:["es","est","êtes","sont"],a:2,e:"Vous êtes"}
+    ]
+  },
+  {
+    id:3, mod:1, t:"Artigos definidos e indefinidos · Il y a",
+    tFr:"L'article indéfini, l'article défini. Il y a/il n'y a pas",
+    grammar:`<p><b>Artigos definidos</b> (o/a/os/as):</p>
+    <ul>
+      <li><code>le</code> — masculino: <i>le café</i></li>
+      <li><code>la</code> — feminino: <i>la maison</i></li>
+      <li><code>l'</code> — antes de vogal/h mudo: <i>l'hôtel, l'avenue</i></li>
+      <li><code>les</code> — plural: <i>les amis</i></li>
+    </ul>
+    <p><b>Artigos indefinidos</b> (um/uma/uns/umas):</p>
+    <ul>
+      <li><code>un</code> (masc.) · <code>une</code> (fem.) · <code>des</code> (plural)</li>
+    </ul>
+    <p><b>Il y a</b> = há / existe (singular ou plural).<br>
+    Negação: <code>il n'y a pas de</code> + nome (sem artigo!).<br>
+    <i>Il y a un café. → Il n'y a pas <b>de</b> café.</i></p>`,
+    vocab:[
+      {fr:"un chien",pt:"um cão"},{fr:"une chatte",pt:"uma gata"},
+      {fr:"des canaris",pt:"uns canários"},{fr:"un lapin",pt:"um coelho"},
+      {fr:"la banque",pt:"o banco"},{fr:"l'immeuble",pt:"o prédio"},
+      {fr:"la rue",pt:"a rua"},{fr:"le quartier",pt:"o bairro"},
+      {fr:"un embouteillage",pt:"um engarrafamento"}
+    ],
+    ex:[
+      {fr:"J'ai un chien et des canaris.",pt:"Tenho um cão e uns canários."},
+      {fr:"Il y a des cafés sympathiques.",pt:"Há cafés simpáticos."},
+      {fr:"Il n'y a pas de bière ici.",pt:"Não tem cerveja aqui."}
+    ],
+    quiz:[
+      {q:"____ hôtel de Castiglione",o:["Le","La","L'","Les"],a:2,e:"hôtel começa com h mudo → l'"},
+      {q:"J'ai ____ chatte.",o:["un","une","des","la"],a:1,e:"chatte é feminino → une"},
+      {q:"Negativo de \"Il y a un problème\":",o:["Il n'y a pas un problème","Il n'y a pas de problème","Il y a pas de problème","Il n'a pas de problème"],a:1,e:"Na negação, un/une/des → de"}
+    ]
+  },
+  {
+    id:4, mod:1, t:"Verbos -ER (Parte II) · C'est, Ce sont",
+    tFr:"Présent de l'indicatif: verbes du premier groupe (Partie II). C'est, ce sont",
+    grammar:`<p>Mais verbos do 1º grupo: <b>écouter</b> (ouvir), <b>aimer</b> (gostar/amar), <b>regarder</b> (assistir/olhar), <b>manger</b> (comer).</p>
+    <p><b>C'est</b> (= é/este é) — usado para <i>identificar</i> uma coisa/pessoa:<br>
+    <i>C'est la Tour Eiffel. C'est mon ami.</i></p>
+    <p><b>Ce sont</b> = são (plural): <i>Ce sont mes amis.</i></p>
+    <p>⚠️ Diferença: <i>Il est professeur</i> (profissão, sem artigo) vs <i>C'est un professeur</i> (com artigo).</p>`,
+    conj:[
+      {v:"écouter", m:"ouvir/escutar", f:{je:"écoute",tu:"écoutes",il:"écoute",nous:"écoutons",vous:"écoutez",ils:"écoutent"}},
+      {v:"aimer", m:"amar/gostar", f:{je:"aime",tu:"aimes",il:"aime",nous:"aimons",vous:"aimez",ils:"aiment"}},
+      {v:"manger", m:"comer", f:{je:"mange",tu:"manges",il:"mange",nous:"mangeons",vous:"mangez",ils:"mangent"}}
+    ],
+    vocab:[
+      {fr:"écouter",pt:"ouvir"},{fr:"aimer",pt:"amar/gostar"},
+      {fr:"adorer",pt:"adorar"},{fr:"détester",pt:"detestar"},
+      {fr:"regarder",pt:"assistir"},{fr:"chanter",pt:"cantar"},
+      {fr:"danser",pt:"dançar"},{fr:"travailler",pt:"trabalhar"}
+    ],
+    ex:[
+      {fr:"C'est la Tour Eiffel.",pt:"É a Torre Eiffel."},
+      {fr:"J'aime la musique française.",pt:"Eu gosto da música francesa."},
+      {fr:"Ce sont mes amis.",pt:"São meus amigos."}
+    ],
+    quiz:[
+      {q:"____ un musée. (singular)",o:["Il est","C'est","Ce sont","Elle est"],a:1,e:"C'est + artigo para identificar"},
+      {q:"Nous ____ une pizza.",o:["mange","manges","mangeons","mangez"],a:2,e:"manger → nous mangeons (mantém -e antes de -ons)"},
+      {q:"Vous ____ la musique.",o:["écoute","écoutes","écoutez","écoutent"],a:2,e:"Vous écoutez"}
+    ]
+  },
+  {
+    id:5, mod:1, t:"Palavras interrogativas · AVOIR · CONNAÎTRE · DE",
+    tFr:"Mots interrogatifs. Verbes avoir et connaître. Proposition DE",
+    grammar:`<p><b>Palavras interrogativas:</b></p>
+    <ul>
+      <li><code>Qui?</code> = Quem?</li>
+      <li><code>Que / Qu'est-ce que?</code> = O quê?</li>
+      <li><code>Quand?</code> = Quando?</li>
+      <li><code>Où?</code> = Onde?</li>
+      <li><code>Pourquoi?</code> = Porquê?</li>
+      <li><code>Comment?</code> = Como?</li>
+      <li><code>Combien?</code> = Quanto(s)?</li>
+      <li><code>Quel(le)?</code> = Qual?</li>
+    </ul>
+    <p><b>DE</b> = de, indica posse/origem:<br>
+    <i>la maison <b>de</b> Paul</i>, <i>le livre <b>de</b> français</i>.<br>
+    Contrai com artigo: <code>de + le = du</code>, <code>de + les = des</code>.</p>`,
+    conj:[
+      {v:"avoir", m:"ter", f:{je:"ai",tu:"as",il:"a",nous:"avons",vous:"avez",ils:"ont"}},
+      {v:"connaître", m:"conhecer", f:{je:"connais",tu:"connais",il:"connaît",nous:"connaissons",vous:"connaissez",ils:"connaissent"}}
+    ],
+    vocab:[
+      {fr:"avoir faim",pt:"estar com fome"},{fr:"avoir soif",pt:"estar com sede"},
+      {fr:"avoir chaud",pt:"estar com calor"},{fr:"avoir froid",pt:"estar com frio"},
+      {fr:"avoir … ans",pt:"ter … anos"},{fr:"connaître",pt:"conhecer"}
+    ],
+    ex:[
+      {fr:"Tu as quel âge?",pt:"Quantos anos tens?"},
+      {fr:"Où est-ce que tu habites?",pt:"Onde moras?"},
+      {fr:"Je connais Paris.",pt:"Conheço Paris."}
+    ],
+    quiz:[
+      {q:"____ tu travailles? (Onde)",o:["Quand","Où","Qui","Comment"],a:1,e:"Où = onde"},
+      {q:"Nous ____ deux chats.",o:["avons","sommes","ont","avez"],a:0,e:"avoir → nous avons"},
+      {q:"de + le café =",o:["de le café","du café","des café","de café"],a:1,e:"de+le=du (contração obrigatória)"}
+    ]
+  },
+  {
+    id:6, mod:1, t:"Preposições · Masculino/Feminino · Plural",
+    tFr:"Prépositions. Masculin et féminin. Le pluriel",
+    grammar:`<p><b>Preposições de lugar (países/cidades):</b></p>
+    <ul>
+      <li><code>à</code> + cidade: <i>à Paris, à Lisbonne</i></li>
+      <li><code>en</code> + país feminino: <i>en France, en Italie</i></li>
+      <li><code>au</code> + país masculino: <i>au Brésil, au Portugal</i></li>
+      <li><code>aux</code> + país plural: <i>aux États-Unis</i></li>
+    </ul>
+    <p><b>Feminino</b>: geralmente acrescenta-se <code>-e</code>: <i>petit → petite</i>. Exceções: <i>beau→belle, vieux→vieille, gentil→gentille</i>.</p>
+    <p><b>Plural</b>: acrescenta-se <code>-s</code> (silencioso). Palavras em <i>-s, -x, -z</i> não mudam. Palavras em <i>-al</i> → <i>-aux</i> (<i>journal → journaux</i>).</p>`,
+    vocab:[
+      {fr:"petit/petite",pt:"pequeno(a)"},{fr:"grand/grande",pt:"grande"},
+      {fr:"beau/belle",pt:"belo/bela"},{fr:"vieux/vieille",pt:"velho(a)"},
+      {fr:"un journal/des journaux",pt:"jornal/jornais"},
+      {fr:"un cheval/des chevaux",pt:"cavalo(s)"}
+    ],
+    ex:[
+      {fr:"Je vais à Paris, en France.",pt:"Vou a Paris, na França."},
+      {fr:"Elle est belle et intelligente.",pt:"Ela é bela e inteligente."},
+      {fr:"Les chevaux sont rapides.",pt:"Os cavalos são rápidos."}
+    ],
+    quiz:[
+      {q:"Je vais ____ Brésil.",o:["à","en","au","aux"],a:2,e:"Brésil é masculino → au"},
+      {q:"Plural de \"un cheval\":",o:["chevales","chevals","chevaux","chevaus"],a:2,e:"-al → -aux"},
+      {q:"Feminino de \"beau\":",o:["beaue","belle","beau","beaux"],a:1,e:"beau → belle (irregular)"}
+    ]
+  },
+  {
+    id:7, mod:1, t:"Verbos do 2º e 3º grupo · Pronomes tônicos",
+    tFr:"Verbes du deuxième et troisième groupe. Pronoms toniques",
+    grammar:`<p><b>2º grupo: verbos em -IR</b> (tipo <i>finir</i>) → terminações: <code>-is, -is, -it, -issons, -issez, -issent</code>.</p>
+    <p><b>3º grupo: verbos irregulares</b>. Os mais comuns: <i>aller, faire, prendre, venir, voir, vouloir, pouvoir, devoir, savoir</i>.</p>
+    <p><b>Pronomes tônicos</b> (usados depois de preposição, para enfatizar, ou sozinhos):</p>
+    <ul>
+      <li>moi (eu), toi (tu), lui (ele), elle (ela)</li>
+      <li>nous, vous, eux (eles), elles</li>
+    </ul>
+    <p><i>C'est pour <b>moi</b>. Je travaille avec <b>lui</b>. <b>Moi</b>, j'aime le café.</i></p>`,
+    conj:[
+      {v:"finir", m:"terminar", f:{je:"finis",tu:"finis",il:"finit",nous:"finissons",vous:"finissez",ils:"finissent"}},
+      {v:"choisir", m:"escolher", f:{je:"choisis",tu:"choisis",il:"choisit",nous:"choisissons",vous:"choisissez",ils:"choisissent"}},
+      {v:"prendre", m:"pegar/tomar", f:{je:"prends",tu:"prends",il:"prend",nous:"prenons",vous:"prenez",ils:"prennent"}}
+    ],
+    vocab:[
+      {fr:"finir",pt:"terminar"},{fr:"choisir",pt:"escolher"},
+      {fr:"grandir",pt:"crescer"},{fr:"réussir",pt:"ter sucesso"},
+      {fr:"moi/toi/lui/elle",pt:"eu/tu/ele/ela (tônicos)"},
+      {fr:"eux/elles",pt:"eles/elas (tônicos)"}
+    ],
+    ex:[
+      {fr:"Je finis mon travail.",pt:"Termino meu trabalho."},
+      {fr:"C'est pour toi.",pt:"É para ti."},
+      {fr:"Moi, j'adore le chocolat.",pt:"Eu, eu adoro chocolate."}
+    ],
+    quiz:[
+      {q:"Nous ____ le projet.",o:["finis","finit","finissons","finissez"],a:2,e:"finir → nous finissons (insere -iss-)"},
+      {q:"C'est pour ____. (ele)",o:["il","le","lui","son"],a:2,e:"Após preposição usa-se tônico: lui"},
+      {q:"Ils ____ le menu.",o:["choisit","choisissent","choisissez","choisis"],a:1,e:"Ils choisissent"}
+    ]
+  },
+  {
+    id:8, mod:1, t:"Verbos JOUER e FAIRE",
+    tFr:"Verbes jouer et faire",
+    grammar:`<p><b>JOUER</b> = jogar/brincar/tocar. Estrutura:</p>
+    <ul>
+      <li><code>jouer à</code> + esporte/jogo: <i>jouer <b>au</b> foot, <b>aux</b> cartes</i></li>
+      <li><code>jouer de</code> + instrumento: <i>jouer <b>du</b> piano, <b>de la</b> guitare</i></li>
+    </ul>
+    <p><b>FAIRE</b> = fazer. Muito usado: <i>faire du sport, faire la cuisine, faire les courses</i>.</p>`,
+    conj:[
+      {v:"jouer", m:"jogar/tocar", f:{je:"joue",tu:"joues",il:"joue",nous:"jouons",vous:"jouez",ils:"jouent"}},
+      {v:"faire", m:"fazer", f:{je:"fais",tu:"fais",il:"fait",nous:"faisons",vous:"faites",ils:"font"}}
+    ],
+    vocab:[
+      {fr:"jouer au foot",pt:"jogar futebol"},{fr:"jouer du piano",pt:"tocar piano"},
+      {fr:"faire du sport",pt:"praticar esporte"},{fr:"faire les courses",pt:"fazer compras"},
+      {fr:"faire la cuisine",pt:"cozinhar"},{fr:"faire la vaisselle",pt:"lavar a louça"},
+      {fr:"faire le ménage",pt:"fazer faxina"}
+    ],
+    ex:[
+      {fr:"Je joue au tennis le week-end.",pt:"Jogo ténis no fim-de-semana."},
+      {fr:"Elle joue de la guitare.",pt:"Ela toca guitarra."},
+      {fr:"Nous faisons les courses.",pt:"Fazemos as compras."}
+    ],
+    quiz:[
+      {q:"Il joue ____ piano.",o:["au","du","le","de"],a:1,e:"instrumento → de+le=du"},
+      {q:"Vous ____ la cuisine.",o:["faisez","faites","fais","font"],a:1,e:"Vous faites (irregular!)"},
+      {q:"Nous jouons ____ cartes.",o:["aux","des","les","au"],a:0,e:"jogo → à+les=aux"}
+    ]
+  },
+  {
+    id:9, mod:1, t:"Verbo ALLER · Futur proche",
+    tFr:"Verbe aller. Futur proche",
+    grammar:`<p><b>ALLER</b> = ir. Usado para movimento e para o <b>futuro próximo</b>.</p>
+    <p><b>Futur proche</b> (vou + infinitivo) = aller (presente) + infinitivo.<br>
+    <i>Je <b>vais</b> manger.</i> = Eu vou comer.<br>
+    <i>Nous <b>allons</b> voyager.</i> = Vamos viajar.</p>`,
+    conj:[
+      {v:"aller", m:"ir", f:{je:"vais",tu:"vas",il:"va",nous:"allons",vous:"allez",ils:"vont"}}
+    ],
+    vocab:[
+      {fr:"demain",pt:"amanhã"},{fr:"ce soir",pt:"esta noite"},
+      {fr:"la semaine prochaine",pt:"a próxima semana"},
+      {fr:"bientôt",pt:"em breve"},{fr:"tout de suite",pt:"já / imediatamente"}
+    ],
+    ex:[
+      {fr:"Je vais au cinéma ce soir.",pt:"Vou ao cinema esta noite."},
+      {fr:"Nous allons partir demain.",pt:"Vamos partir amanhã."},
+      {fr:"Tu vas étudier le français.",pt:"Vais estudar francês."}
+    ],
+    quiz:[
+      {q:"Vous ____ à Paris.",o:["va","allons","allez","vont"],a:2,e:"Vous allez"},
+      {q:"Futur proche de \"je mange\":",o:["je mangerai","je vais manger","je mange","j'ai mangé"],a:1,e:"aller + infinitivo"},
+      {q:"Ils ____ au restaurant.",o:["va","vont","allons","allez"],a:1,e:"Ils vont"}
+    ]
+  },
+  {
+    id:10, mod:1, t:"Le passé composé (I)",
+    tFr:"Le passé composé",
+    grammar:`<p>O <b>passé composé</b> = passado mais usado em francês oral. Equivale a <i>"eu falei / eu tenho falado"</i>.</p>
+    <p><b>Fórmula:</b> sujeito + <code>avoir</code> ou <code>être</code> (presente) + <b>particípio passado</b></p>
+    <p><b>Particípios passados:</b></p>
+    <ul>
+      <li>Verbos -ER → -<b>é</b>: parler → parl<b>é</b></li>
+      <li>Verbos -IR → -<b>i</b>: finir → fin<b>i</b></li>
+      <li>Verbos -RE → -<b>u</b>: vendre → vend<b>u</b></li>
+      <li>Irregulares: <i>avoir→eu, être→été, faire→fait, voir→vu, prendre→pris</i></li>
+    </ul>
+    <p>A maioria usa <b>avoir</b>: <i>J'ai parlé, Tu as fini, Il a vu.</i></p>`,
+    vocab:[
+      {fr:"hier",pt:"ontem"},{fr:"avant-hier",pt:"anteontem"},
+      {fr:"la semaine dernière",pt:"a semana passada"},
+      {fr:"ce matin",pt:"esta manhã"},{fr:"déjà",pt:"já"}
+    ],
+    ex:[
+      {fr:"J'ai mangé une pizza.",pt:"Comi uma pizza."},
+      {fr:"Tu as fini tes devoirs?",pt:"Acabaste os teus deveres?"},
+      {fr:"Nous avons vu un film.",pt:"Vimos um filme."}
+    ],
+    quiz:[
+      {q:"Particípio de \"manger\":",o:["mangi","mangu","mangé","mangée"],a:2,e:"-ER → -é"},
+      {q:"Particípio de \"voir\":",o:["voi","voyé","vu","vué"],a:2,e:"voir → vu (irregular)"},
+      {q:"Passado de \"je parle\":",o:["je parle","j'ai parlé","j'ai parle","je parlé"],a:1,e:"avoir + particípio"}
+    ]
+  },
+  {
+    id:11, mod:1, t:"Dire l'heure (Dizer as horas)",
+    tFr:"Dire l'heure",
+    grammar:`<p><b>Quelle heure est-il?</b> = Que horas são?</p>
+    <ul>
+      <li><i>Il est une heure.</i> = É uma hora.</li>
+      <li><i>Il est deux heures.</i> = São duas.</li>
+      <li><i>Il est trois heures <b>et quart</b>.</i> = 3h15</li>
+      <li><i>Il est cinq heures <b>et demie</b>.</i> = 5h30</li>
+      <li><i>Il est six heures <b>moins le quart</b>.</i> = 5h45</li>
+      <li><i>Il est midi / minuit.</i> = meio-dia / meia-noite</li>
+    </ul>
+    <p>Formato 24h: <i>Il est quatorze heures trente.</i> = 14h30.</p>`,
+    vocab:[
+      {fr:"midi",pt:"meio-dia"},{fr:"minuit",pt:"meia-noite"},
+      {fr:"et quart",pt:"e quinze"},{fr:"et demie",pt:"e meia"},
+      {fr:"moins le quart",pt:"menos um quarto"},
+      {fr:"du matin",pt:"da manhã"},{fr:"de l'après-midi",pt:"da tarde"},{fr:"du soir",pt:"da noite"}
+    ],
+    ex:[
+      {fr:"Il est neuf heures et quart.",pt:"São nove e quinze."},
+      {fr:"À quelle heure tu pars?",pt:"A que horas partes?"},
+      {fr:"Le train arrive à dix-huit heures.",pt:"O comboio chega às 18h."}
+    ],
+    quiz:[
+      {q:"7h30 =",o:["sept heures trente","sept heures et demie","sept et demie","ambas A e B"],a:3,e:"Ambas formas são corretas"},
+      {q:"12h00 =",o:["douze heures","midi","midi ou douze heures","minuit"],a:2,e:"Pode dizer-se midi ou douze heures"},
+      {q:"\"São 5h45\" em francês:",o:["Il est cinq heures quarante-cinq","Il est six heures moins le quart","Ambas","Il est cinq et trois quarts"],a:2,e:"Ambas formas funcionam"}
+    ]
+  },
+  {
+    id:12, mod:1, t:"Passé composé (II) — Verbos com ÊTRE",
+    tFr:"Le passé composé II",
+    grammar:`<p>Alguns verbos usam <b>ÊTRE</b> (não avoir) no passé composé — sobretudo verbos de <b>movimento</b> e <b>mudança de estado</b>.</p>
+    <p>Mnemônica <b>DR & MRS VANDERTRAMP</b>:<br>
+    <i>aller, venir, arriver, partir, entrer, sortir, monter, descendre, naître, mourir, rester, tomber, retourner, devenir, revenir, passer (par)</i> e todos os <b>pronominais</b>.</p>
+    <p>⚠️ <b>Com ÊTRE, o particípio concorda com o sujeito</b> (gênero e número):<br>
+    <i>Il est all<b>é</b>.</i> · <i>Elle est all<b>ée</b>.</i> · <i>Ils sont all<b>és</b>.</i> · <i>Elles sont all<b>ées</b>.</i></p>`,
+    vocab:[
+      {fr:"venir → venu",pt:"vir → vindo"},{fr:"aller → allé",pt:"ir → ido"},
+      {fr:"naître → né",pt:"nascer → nascido"},{fr:"mourir → mort",pt:"morrer → morto"},
+      {fr:"partir → parti",pt:"partir → partido"},{fr:"rester → resté",pt:"ficar → ficado"}
+    ],
+    ex:[
+      {fr:"Elle est née en 1990.",pt:"Ela nasceu em 1990."},
+      {fr:"Nous sommes allés au cinéma.",pt:"Fomos ao cinema."},
+      {fr:"Ils sont partis hier.",pt:"Partiram ontem."}
+    ],
+    quiz:[
+      {q:"Elle ____ allée à Paris.",o:["a","est","ont","sont"],a:1,e:"aller usa ÊTRE no passé composé"},
+      {q:"Concordância: \"Marie est ____ \" (sair = sortir):",o:["sorti","sortie","sortis","sorties"],a:1,e:"Feminino singular → sortie"},
+      {q:"Qual usa avoir?",o:["aller","venir","manger","arriver"],a:2,e:"manger é regular → avoir"}
+    ]
+  },
+  {
+    id:13, mod:1, t:"Comparativos e superlativos",
+    tFr:"Comparatifs et superlatifs",
+    grammar:`<p><b>Comparativos</b> (com adjetivos/advérbios):</p>
+    <ul>
+      <li><code>plus + adj + que</code> = mais … que: <i>Il est <b>plus</b> grand <b>que</b> moi.</i></li>
+      <li><code>moins + adj + que</code> = menos … que</li>
+      <li><code>aussi + adj + que</code> = tão … como</li>
+    </ul>
+    <p><b>Irregulares:</b> <i>bon → meilleur</i>, <i>bien → mieux</i>.</p>
+    <p><b>Superlativos:</b></p>
+    <ul>
+      <li><code>le/la/les plus + adj</code> = o mais …</li>
+      <li><code>le/la/les moins + adj</code> = o menos …</li>
+    </ul>
+    <p><i>C'est <b>le plus</b> grand musée <b>de</b> Paris.</i></p>`,
+    vocab:[
+      {fr:"plus … que",pt:"mais … do que"},{fr:"moins … que",pt:"menos … do que"},
+      {fr:"aussi … que",pt:"tão … como"},{fr:"meilleur(e)",pt:"melhor"},
+      {fr:"mieux",pt:"melhor (advérbio)"},{fr:"pire",pt:"pior"}
+    ],
+    ex:[
+      {fr:"Paris est plus grand que Lyon.",pt:"Paris é maior que Lyon."},
+      {fr:"Ce vin est meilleur que l'autre.",pt:"Este vinho é melhor que o outro."},
+      {fr:"C'est la plus belle ville du monde.",pt:"É a mais bela cidade do mundo."}
+    ],
+    quiz:[
+      {q:"\"melhor\" (adjetivo):",o:["plus bon","meilleur","mieux","plus bien"],a:1,e:"bon → meilleur"},
+      {q:"\"tão alto quanto eu\":",o:["plus grand que moi","aussi grand que moi","moins grand que moi","si grand que moi"],a:1,e:"aussi … que = tão … como"},
+      {q:"Superlativo: \"o mais rápido\":",o:["plus rapide","le plus rapide","très rapide","plus le rapide"],a:1,e:"le/la/les plus + adj"}
+    ]
+  },
+  {
+    id:14, mod:1, t:"Demonstrativos",
+    tFr:"Démonstratifs",
+    grammar:`<p>Adjetivos demonstrativos (= este, esta, isto):</p>
+    <ul>
+      <li><code>ce</code> + masc. sing.: <i>ce livre</i></li>
+      <li><code>cet</code> + masc. sing. com vogal/h mudo: <i>cet hôtel, cet ami</i></li>
+      <li><code>cette</code> + fem. sing.: <i>cette maison</i></li>
+      <li><code>ces</code> + plural: <i>ces enfants</i></li>
+    </ul>
+    <p>Para distinguir "este" / "esse" / "aquele": acrescente <code>-ci</code> (perto) ou <code>-là</code> (longe): <i>ce livre-<b>ci</b></i> / <i>ce livre-<b>là</b></i>.</p>`,
+    vocab:[
+      {fr:"ce livre",pt:"este livro"},{fr:"cet ami",pt:"este amigo"},
+      {fr:"cette voiture",pt:"este carro"},{fr:"ces gens",pt:"estas pessoas"},
+      {fr:"ici",pt:"aqui"},{fr:"là-bas",pt:"lá / ali"}
+    ],
+    ex:[
+      {fr:"Ce restaurant est excellent.",pt:"Este restaurante é excelente."},
+      {fr:"Cette robe est belle.",pt:"Este vestido é bonito."},
+      {fr:"J'aime cet hôtel.",pt:"Gosto deste hotel."}
+    ],
+    quiz:[
+      {q:"____ hôtel est cher.",o:["ce","cet","cette","ces"],a:1,e:"masc. + vogal → cet"},
+      {q:"____ enfants jouent.",o:["ce","cet","cette","ces"],a:3,e:"plural → ces"},
+      {q:"____ fille est gentille.",o:["ce","cet","cette","ces"],a:2,e:"fem. sing. → cette"}
+    ]
+  },
+  {
+    id:15, mod:1, t:"As perguntas (III) — registros",
+    tFr:"Les questions III",
+    grammar:`<p>Três <b>registros</b> de pergunta:</p>
+    <table class="conj">
+      <tr><th>Familiar</th><th>Padrão</th><th>Formal</th></tr>
+      <tr><td>Tu viens?</td><td>Est-ce que tu viens?</td><td>Viens-tu?</td></tr>
+      <tr><td>Tu fais quoi?</td><td>Qu'est-ce que tu fais?</td><td>Que fais-tu?</td></tr>
+      <tr><td>Il est où?</td><td>Où est-ce qu'il est?</td><td>Où est-il?</td></tr>
+    </table>
+    <p>Em pergunta com inversão e 3ª pessoa que termina em vogal, insere-se <code>-t-</code>: <i>A-<b>t</b>-il faim? · Va-<b>t</b>-elle au cinéma?</i></p>`,
+    vocab:[
+      {fr:"Qu'est-ce que c'est?",pt:"O que é isto?"},
+      {fr:"Qui est-ce?",pt:"Quem é?"},
+      {fr:"Comment allez-vous?",pt:"Como vai (você)?"},
+      {fr:"Pourquoi pas?",pt:"Por que não?"}
+    ],
+    ex:[
+      {fr:"Où habites-tu?",pt:"Onde moras?"},
+      {fr:"Est-ce qu'elle parle français?",pt:"Ela fala francês?"},
+      {fr:"A-t-il une voiture?",pt:"Ele tem um carro?"}
+    ],
+    quiz:[
+      {q:"Forma padrão: \"Onde tu vais?\"",o:["Tu vas où?","Où est-ce que tu vas?","Où vas-tu?","Todas corretas"],a:3,e:"Os três registros funcionam"},
+      {q:"Inversão de \"il a faim\":",o:["A il faim?","A-t-il faim?","Il a-t faim?","A-il faim?"],a:1,e:"Adicionar -t- entre vogais"},
+      {q:"\"O quê?\" em registo familiar:",o:["Que","Qu'est-ce que","Quoi","Qui"],a:2,e:"Familiar: \"Tu fais quoi?\""}
+    ]
+  },
+  {
+    id:16, mod:1, t:"Adjetivos possessivos",
+    tFr:"Les adjectifs possessifs",
+    grammar:`<p>Concordam com o <b>objeto possuído</b>, não com o dono!</p>
+    <table class="conj">
+      <tr><th>Dono</th><th>masc. sing.</th><th>fem. sing.</th><th>plural</th></tr>
+      <tr><td>Je</td><td>mon</td><td>ma</td><td>mes</td></tr>
+      <tr><td>Tu</td><td>ton</td><td>ta</td><td>tes</td></tr>
+      <tr><td>Il/Elle</td><td>son</td><td>sa</td><td>ses</td></tr>
+      <tr><td>Nous</td><td>notre</td><td>notre</td><td>nos</td></tr>
+      <tr><td>Vous</td><td>votre</td><td>votre</td><td>vos</td></tr>
+      <tr><td>Ils/Elles</td><td>leur</td><td>leur</td><td>leurs</td></tr>
+    </table>
+    <p>⚠️ Antes de vogal/h mudo, fem. sing. vira masc.: <i>mon amie</i> (não "ma amie").</p>`,
+    vocab:[
+      {fr:"mon père",pt:"meu pai"},{fr:"ma mère",pt:"minha mãe"},
+      {fr:"mes parents",pt:"meus pais"},{fr:"notre maison",pt:"nossa casa"},
+      {fr:"leur enfant",pt:"seu/deles filho"}
+    ],
+    ex:[
+      {fr:"Mon père est médecin.",pt:"Meu pai é médico."},
+      {fr:"Ils aiment leurs enfants.",pt:"Eles amam seus filhos."},
+      {fr:"C'est mon amie Marie.",pt:"É minha amiga Maria."}
+    ],
+    quiz:[
+      {q:"____ sœur (a minha irmã).",o:["mon","ma","mes","mien"],a:1,e:"fem. sing. → ma"},
+      {q:"____ amie (a minha amiga).",o:["mon","ma","mes","mien"],a:0,e:"amie começa com vogal → mon"},
+      {q:"\"a casa deles\":",o:["sa maison","leur maison","leurs maison","ses maisons"],a:1,e:"deles + sing. → leur"}
+    ]
+  },
+  // ============ MODULE 2 ============
+  {
+    id:17, mod:2, t:"Os partitivos",
+    tFr:"Les partitifs",
+    grammar:`<p>O <b>partitivo</b> indica uma <i>quantidade indeterminada</i> (≈ "do/da" em português):</p>
+    <ul>
+      <li><code>du</code> + masc.: <i>du pain</i> (pão)</li>
+      <li><code>de la</code> + fem.: <i>de la viande</i> (carne)</li>
+      <li><code>de l'</code> + vogal/h mudo: <i>de l'eau</i> (água)</li>
+      <li><code>des</code> + plural: <i>des fruits</i></li>
+    </ul>
+    <p>⚠️ Em frase <b>negativa</b> → vira <code>de</code> (ou <code>d'</code>): <i>Je ne mange pas <b>de</b> pain.</i></p>
+    <p>Diferença: <i>J'aime <b>le</b> café</i> (gosto de café em geral) vs <i>Je bois <b>du</b> café</i> (bebo café = uma quantidade).</p>`,
+    vocab:[
+      {fr:"du pain",pt:"pão"},{fr:"de la viande",pt:"carne"},
+      {fr:"de l'eau",pt:"água"},{fr:"des fruits",pt:"frutas"},
+      {fr:"du vin",pt:"vinho"},{fr:"de la bière",pt:"cerveja"}
+    ],
+    ex:[
+      {fr:"Je mange du pain.",pt:"Como pão."},
+      {fr:"Tu veux de la salade?",pt:"Queres salada?"},
+      {fr:"Je ne bois pas de vin.",pt:"Não bebo vinho."}
+    ],
+    quiz:[
+      {q:"Je mange ____ poisson.",o:["le","du","de la","des"],a:1,e:"poisson masc. → du"},
+      {q:"Negação de \"je bois du café\":",o:["je ne bois pas du café","je ne bois pas de café","je bois pas du café","je ne bois pas le café"],a:1,e:"Negação → de"},
+      {q:"Elle prend ____ eau.",o:["du","de la","de l'","des"],a:2,e:"eau começa com vogal → de l'"}
+    ]
+  },
+  {
+    id:18, mod:2, t:"Pronomes tônicos (Parte II)",
+    tFr:"Les pronoms toniques - Partie II",
+    grammar:`<p>Os tônicos (moi, toi, lui, elle, nous, vous, eux, elles) também servem para:</p>
+    <ul>
+      <li>Enfatizar: <i><b>Moi</b>, je préfère le thé.</i></li>
+      <li>Após preposições: <i>chez <b>lui</b>, avec <b>nous</b>, pour <b>eux</b>.</i></li>
+      <li>Em comparações: <i>plus grand que <b>moi</b>.</i></li>
+      <li>Em respostas curtas: <i>— Qui veut du café? — <b>Moi!</b></i></li>
+      <li>Com <code>-même</code> (mesmo): <i>moi-même = eu mesmo</i></li>
+    </ul>`,
+    vocab:[
+      {fr:"chez moi",pt:"na minha casa"},{fr:"avec toi",pt:"contigo"},
+      {fr:"sans lui",pt:"sem ele"},{fr:"pour elle",pt:"para ela"},
+      {fr:"moi-même",pt:"eu mesmo"}
+    ],
+    ex:[
+      {fr:"Je vais chez moi.",pt:"Vou para casa."},
+      {fr:"Eux, ils adorent le foot.",pt:"Eles adoram futebol."},
+      {fr:"Je l'ai fait moi-même.",pt:"Fi-lo eu mesmo."}
+    ],
+    quiz:[
+      {q:"Je sors avec ____.",o:["il","elle","la","lui"],a:1,e:"\"com ela\" → avec elle"},
+      {q:"____, j'aime le chocolat.",o:["Je","Moi","Me","Mon"],a:1,e:"Enfatizar → tônico Moi"},
+      {q:"Je l'ai fait ____.",o:["moi","moi-même","me","je"],a:1,e:"Eu mesmo → moi-même"}
+    ]
+  },
+  {
+    id:19, mod:2, t:"Imperativo · Palavras de quantidade",
+    tFr:"L'impératif. Mots de quantité",
+    grammar:`<p><b>Imperativo</b> = ordem/conselho. Usam-se 3 pessoas (tu, nous, vous) sem o pronome:</p>
+    <ul>
+      <li>Tu parles → <b>Parle!</b> (verbos -ER perdem o -s)</li>
+      <li>Nous parlons → <b>Parlons!</b> (= Falemos!)</li>
+      <li>Vous parlez → <b>Parlez!</b></li>
+    </ul>
+    <p>Irregulares: <i>Être → sois, soyons, soyez · Avoir → aie, ayons, ayez · Savoir → sache, sachons, sachez</i>.</p>
+    <p><b>Quantidade:</b> <code>beaucoup de</code> (muito), <code>peu de</code> (pouco), <code>assez de</code> (suficiente), <code>trop de</code> (demais), <code>un peu de</code> (um pouco de).<br>
+    Sempre seguidas de <code>de</code> sem artigo!</p>`,
+    vocab:[
+      {fr:"beaucoup de",pt:"muito(s)"},{fr:"peu de",pt:"pouco(s)"},
+      {fr:"un peu de",pt:"um pouco de"},{fr:"assez de",pt:"o suficiente"},
+      {fr:"trop de",pt:"demais"}
+    ],
+    ex:[
+      {fr:"Mange tes légumes!",pt:"Come os teus legumes!"},
+      {fr:"Ne sois pas triste.",pt:"Não fiques triste."},
+      {fr:"Il y a beaucoup de monde.",pt:"Tem muita gente."}
+    ],
+    quiz:[
+      {q:"Imperativo de \"tu manges\":",o:["manges","mange","mangez","mangons"],a:1,e:"-ER perde o -s no imperativo de tu"},
+      {q:"\"Sejam felizes!\" (vous):",o:["soyez heureux","êtes heureux","sois heureux","soyons heureux"],a:0,e:"être imperativo: sois, soyons, soyez"},
+      {q:"J'ai ____ travail.",o:["beaucoup","beaucoup de","beaucoup du","de beaucoup"],a:1,e:"beaucoup + de (sem artigo)"}
+    ]
+  },
+  {
+    id:20, mod:2, t:"Verbos pronominais",
+    tFr:"Les verbes pronominaux",
+    grammar:`<p>Verbos com pronome reflexivo (= "lavar-<b>se</b>", "levantar-<b>se</b>"). Pronomes: <code>me, te, se, nous, vous, se</code>.</p>
+    <table class="conj">
+      <tr><th>Sujeito</th><th>Pronome</th><th>Exemplo</th></tr>
+      <tr><td>Je</td><td>me / m'</td><td>je <b>me</b> lave</td></tr>
+      <tr><td>Tu</td><td>te / t'</td><td>tu <b>te</b> laves</td></tr>
+      <tr><td>Il/Elle</td><td>se / s'</td><td>il <b>se</b> lave</td></tr>
+      <tr><td>Nous</td><td>nous</td><td>nous <b>nous</b> lavons</td></tr>
+      <tr><td>Vous</td><td>vous</td><td>vous <b>vous</b> lavez</td></tr>
+      <tr><td>Ils/Elles</td><td>se / s'</td><td>ils <b>se</b> lavent</td></tr>
+    </table>
+    <p>⚠️ No passé composé, todos usam <b>être</b> e o particípio concorda.</p>`,
+    conj:[
+      {v:"se lever", m:"levantar-se", f:{je:"me lève",tu:"te lèves",il:"se lève",nous:"nous levons",vous:"vous levez",ils:"se lèvent"}}
+    ],
+    vocab:[
+      {fr:"se lever",pt:"levantar-se"},{fr:"se laver",pt:"lavar-se"},
+      {fr:"s'habiller",pt:"vestir-se"},{fr:"se brosser les dents",pt:"escovar os dentes"},
+      {fr:"se coucher",pt:"deitar-se"},{fr:"s'appeler",pt:"chamar-se"},
+      {fr:"se reposer",pt:"descansar"}
+    ],
+    ex:[
+      {fr:"Je m'appelle Marie.",pt:"Chamo-me Maria."},
+      {fr:"Nous nous levons à 7h.",pt:"Levantamo-nos às 7h."},
+      {fr:"Elle s'est couchée tard.",pt:"Ela deitou-se tarde."}
+    ],
+    quiz:[
+      {q:"____ douche tous les matins.",o:["Je me","Je se","Je te","Je m'"],a:0,e:"Je + me (te começa com consoante → me)"},
+      {q:"Conjugação correta de \"se laver\" (nous):",o:["nous se lavons","nous nous lavons","nous me lavons","nous lavons"],a:1,e:"Nous nous lavons"},
+      {q:"Passado: \"elle ____ levée\":",o:["a","est","ont","sont"],a:1,e:"Pronominais usam ÊTRE"}
+    ]
+  },
+  {
+    id:21, mod:2, t:"Verbos de deslocamento",
+    tFr:"Les verbes de déplacement",
+    grammar:`<p>Verbos de movimento — quase todos usam <b>ÊTRE</b> no passé composé.</p>
+    <ul>
+      <li><code>aller</code> (ir) ↔ <code>venir</code> (vir)</li>
+      <li><code>arriver</code> (chegar) ↔ <code>partir</code> (partir)</li>
+      <li><code>entrer</code> (entrar) ↔ <code>sortir</code> (sair)</li>
+      <li><code>monter</code> (subir) ↔ <code>descendre</code> (descer)</li>
+      <li><code>rentrer</code> (voltar a casa) · <code>retourner</code> (retornar)</li>
+    </ul>
+    <p>Preposições com viagem: <i>aller <b>à</b> Paris</i>, <i>partir <b>de</b> Lyon</i>, <i>venir <b>de</b> Lisbonne</i>, <i>passer <b>par</b> Madrid</i>.</p>`,
+    conj:[
+      {v:"venir", m:"vir", f:{je:"viens",tu:"viens",il:"vient",nous:"venons",vous:"venez",ils:"viennent"}},
+      {v:"partir", m:"partir", f:{je:"pars",tu:"pars",il:"part",nous:"partons",vous:"partez",ils:"partent"}},
+      {v:"sortir", m:"sair", f:{je:"sors",tu:"sors",il:"sort",nous:"sortons",vous:"sortez",ils:"sortent"}}
+    ],
+    vocab:[
+      {fr:"venir de",pt:"vir de / acabar de"},{fr:"partir à/pour",pt:"partir para"},
+      {fr:"arriver à",pt:"chegar a"},{fr:"sortir de",pt:"sair de"},
+      {fr:"monter dans",pt:"subir em (transporte)"},{fr:"descendre de",pt:"descer de"}
+    ],
+    ex:[
+      {fr:"Je viens de Lisbonne.",pt:"Venho de Lisboa."},
+      {fr:"Il est parti à 8h.",pt:"Ele partiu às 8h."},
+      {fr:"Nous sortons ce soir.",pt:"Saímos esta noite."}
+    ],
+    quiz:[
+      {q:"\"acabar de\" em francês:",o:["finir de","venir de","sortir de","partir de\""],a:1,e:"\"venir de + inf\" = acabar de"},
+      {q:"Vous ____ à Paris demain.",o:["partir","partez","partons","parts"],a:1,e:"Vous partez"},
+      {q:"Ils ____ du restaurant.",o:["sortent","sort","sortons","sortez"],a:0,e:"Ils sortent"}
+    ]
+  },
+  {
+    id:22, mod:2, t:"Exprimer un besoin (necessidade)",
+    tFr:"Exprimer un besoin",
+    grammar:`<p>Para dizer "preciso de":</p>
+    <ul>
+      <li><code>avoir besoin de</code> + nome/infinitivo: <i>J'ai besoin <b>de</b> repos.</i> · <i>J'ai besoin <b>de</b> dormir.</i></li>
+      <li><code>il faut</code> + infinitivo = é preciso: <i>Il faut manger.</i></li>
+      <li><code>devoir</code> = ter de: <i>Je <b>dois</b> partir.</i></li>
+      <li><code>vouloir</code> = querer · <code>pouvoir</code> = poder</li>
+    </ul>`,
+    conj:[
+      {v:"devoir", m:"ter de", f:{je:"dois",tu:"dois",il:"doit",nous:"devons",vous:"devez",ils:"doivent"}},
+      {v:"vouloir", m:"querer", f:{je:"veux",tu:"veux",il:"veut",nous:"voulons",vous:"voulez",ils:"veulent"}},
+      {v:"pouvoir", m:"poder", f:{je:"peux",tu:"peux",il:"peut",nous:"pouvons",vous:"pouvez",ils:"peuvent"}}
+    ],
+    vocab:[
+      {fr:"avoir besoin de",pt:"precisar de"},{fr:"il faut",pt:"é preciso"},
+      {fr:"devoir",pt:"ter de"},{fr:"vouloir",pt:"querer"},
+      {fr:"pouvoir",pt:"poder"}
+    ],
+    ex:[
+      {fr:"J'ai besoin de toi.",pt:"Preciso de ti."},
+      {fr:"Il faut étudier.",pt:"É preciso estudar."},
+      {fr:"Je dois partir maintenant.",pt:"Tenho de ir agora."}
+    ],
+    quiz:[
+      {q:"\"preciso dormir\":",o:["je besoin dormir","j'ai besoin dormir","j'ai besoin de dormir","je dois besoin de dormir"],a:2,e:"avoir besoin de + infinitivo"},
+      {q:"Nous ____ travailler.",o:["doit","devons","devez","doivent"],a:1,e:"Nous devons"},
+      {q:"Vous ____ venir avec moi?",o:["pouvez","peux","peut","pouvons"],a:0,e:"Vous pouvez"}
+    ]
+  },
+  {
+    id:23, mod:2, t:"Posições (localização)",
+    tFr:"Positions",
+    grammar:`<p><b>Preposições de lugar:</b></p>
+    <ul>
+      <li><code>sur</code> = em cima de</li>
+      <li><code>sous</code> = debaixo de</li>
+      <li><code>dans</code> = dentro de</li>
+      <li><code>devant</code> = na frente de</li>
+      <li><code>derrière</code> = atrás de</li>
+      <li><code>à côté de</code> = ao lado de</li>
+      <li><code>entre</code> = entre</li>
+      <li><code>en face de</code> = em frente a</li>
+      <li><code>près de</code> = perto de · <code>loin de</code> = longe de</li>
+      <li><code>au-dessus de</code> = acima · <code>au-dessous de</code> = abaixo</li>
+    </ul>`,
+    vocab:[
+      {fr:"sur la table",pt:"sobre a mesa"},{fr:"sous le lit",pt:"debaixo da cama"},
+      {fr:"dans la boîte",pt:"dentro da caixa"},{fr:"devant la porte",pt:"em frente à porta"},
+      {fr:"derrière toi",pt:"atrás de ti"},{fr:"à côté de moi",pt:"ao meu lado"},
+      {fr:"entre nous",pt:"entre nós"}
+    ],
+    ex:[
+      {fr:"Le livre est sur la table.",pt:"O livro está na mesa."},
+      {fr:"Le chat est sous le lit.",pt:"O gato está debaixo da cama."},
+      {fr:"La banque est en face de la poste.",pt:"O banco fica em frente aos correios."}
+    ],
+    quiz:[
+      {q:"\"em cima da mesa\":",o:["sous la table","sur la table","dans la table","devant la table"],a:1,e:"sur = em cima"},
+      {q:"\"perto de casa\":",o:["loin de la maison","près de la maison","sous la maison","à la maison"],a:1,e:"près de = perto de"},
+      {q:"\"entre os dois\":",o:["entre les deux","dans les deux","sur les deux","sous les deux"],a:0,e:"entre = entre"}
+    ]
+  },
+  {
+    id:24, mod:2, t:"Exprimer la durée (duração)",
+    tFr:"Exprimer la durée",
+    grammar:`<p>Expressões de duração:</p>
+    <ul>
+      <li><code>depuis</code> = desde / há (ação que continua): <i>J'habite ici <b>depuis</b> 5 ans.</i></li>
+      <li><code>il y a</code> = há (ação terminada no passado): <i>J'ai déménagé <b>il y a</b> 5 ans.</i></li>
+      <li><code>pendant</code> = durante: <i>J'ai vécu là <b>pendant</b> 3 ans.</i></li>
+      <li><code>dans</code> = daqui a (futuro): <i>Je pars <b>dans</b> deux jours.</i></li>
+      <li><code>pour</code> = por (duração planeada): <i>Je pars <b>pour</b> une semaine.</i></li>
+    </ul>`,
+    vocab:[
+      {fr:"depuis",pt:"desde / há (contínuo)"},{fr:"il y a",pt:"há (passado terminado)"},
+      {fr:"pendant",pt:"durante"},{fr:"dans",pt:"daqui a"},
+      {fr:"pour",pt:"por (planeado)"}
+    ],
+    ex:[
+      {fr:"J'étudie le français depuis 2 ans.",pt:"Estudo francês há 2 anos."},
+      {fr:"Je suis parti il y a une heure.",pt:"Saí há uma hora."},
+      {fr:"Le film commence dans 10 minutes.",pt:"O filme começa daqui a 10 minutos."}
+    ],
+    quiz:[
+      {q:"Estudo francês há 3 anos (continua):",o:["il y a 3 ans","depuis 3 ans","pendant 3 ans","pour 3 ans"],a:1,e:"contínuo → depuis"},
+      {q:"O comboio sai daqui a 5min:",o:["depuis 5 min","pendant 5 min","dans 5 min","pour 5 min"],a:2,e:"futuro → dans"},
+      {q:"Estudei durante 2 horas (terminado):",o:["depuis 2 heures","pendant 2 heures","il y a 2 heures","dans 2 heures"],a:1,e:"durante = pendant"}
+    ]
+  },
+  {
+    id:25, mod:2, t:"L'imparfait (pretérito imperfeito)",
+    tFr:"L'imparfait",
+    grammar:`<p>O <b>imparfait</b> = imperfeito do português ("eu falava, eu morava"). Usado para:</p>
+    <ul>
+      <li>Descrição no passado: <i>Il <b>faisait</b> beau.</i></li>
+      <li>Hábitos: <i>Quand j'<b>étais</b> petit, je <b>jouais</b> au foot.</i></li>
+      <li>Ação em curso: <i>Je <b>regardais</b> la télé quand il est arrivé.</i></li>
+    </ul>
+    <p><b>Formação:</b> raiz do "nous" presente + <code>-ais, -ais, -ait, -ions, -iez, -aient</code>.<br>
+    <i>nous parl<b>ons</b> → je parl<b>ais</b>, nous parl<b>ions</b></i></p>
+    <p><b>Exceção:</b> <i>être → j'étais</i> (raiz "ét-").</p>`,
+    conj:[
+      {v:"parler (imp.)", m:"falava", f:{je:"parlais",tu:"parlais",il:"parlait",nous:"parlions",vous:"parliez",ils:"parlaient"}},
+      {v:"être (imp.)", m:"era", f:{je:"étais",tu:"étais",il:"était",nous:"étions",vous:"étiez",ils:"étaient"}},
+      {v:"avoir (imp.)", m:"tinha", f:{je:"avais",tu:"avais",il:"avait",nous:"avions",vous:"aviez",ils:"avaient"}}
+    ],
+    vocab:[
+      {fr:"quand j'étais petit",pt:"quando eu era pequeno"},
+      {fr:"avant",pt:"antes"},{fr:"d'habitude",pt:"normalmente"},
+      {fr:"tous les jours",pt:"todos os dias"}
+    ],
+    ex:[
+      {fr:"Quand j'étais jeune, j'aimais jouer dehors.",pt:"Quando era jovem, gostava de brincar fora."},
+      {fr:"Il pleuvait hier.",pt:"Chovia ontem."},
+      {fr:"Nous habitions à Lyon.",pt:"Morávamos em Lyon."}
+    ],
+    quiz:[
+      {q:"Imparfait de \"je parle\":",o:["je parlerai","je parlais","j'ai parlé","je parle"],a:1,e:"-ais"},
+      {q:"Nous ____ (être) heureux.",o:["étions","sommes","étais","étaient"],a:0,e:"Nous étions"},
+      {q:"Quand utilizar imparfait?",o:["ação pontual no passado","hábito/descrição no passado","futuro próximo","ordem"],a:1,e:"Imparfait = fundo, descrição, hábito"}
+    ]
+  },
+  {
+    id:26, mod:2, t:"Mots de liaison (conectores)",
+    tFr:"Les mots de liaison",
+    grammar:`<p>Conectores essenciais para ligar frases:</p>
+    <ul>
+      <li><code>et</code> = e · <code>mais</code> = mas · <code>ou</code> = ou</li>
+      <li><code>donc</code> = portanto · <code>alors</code> = então</li>
+      <li><code>parce que</code> = porque · <code>car</code> = pois</li>
+      <li><code>puis / ensuite</code> = depois · <code>enfin</code> = finalmente</li>
+      <li><code>d'abord</code> = primeiro · <code>après</code> = depois</li>
+      <li><code>cependant / pourtant</code> = contudo</li>
+      <li><code>aussi</code> = também · <code>en plus</code> = além disso</li>
+    </ul>`,
+    vocab:[
+      {fr:"parce que",pt:"porque"},{fr:"donc",pt:"portanto"},
+      {fr:"d'abord",pt:"primeiro"},{fr:"ensuite",pt:"depois"},
+      {fr:"enfin",pt:"finalmente"},{fr:"cependant",pt:"contudo"}
+    ],
+    ex:[
+      {fr:"Il est tard, donc je rentre.",pt:"É tarde, então volto."},
+      {fr:"Je viens parce que j'ai envie.",pt:"Venho porque me apetece."},
+      {fr:"D'abord on mange, ensuite on sort.",pt:"Primeiro comemos, depois saímos."}
+    ],
+    quiz:[
+      {q:"\"porque\":",o:["pour que","parce que","car que","puisque"],a:1,e:"parce que (car também serve, mas mais formal)"},
+      {q:"\"finalmente\":",o:["finally","enfin","ensuite","alors"],a:1,e:"enfin"},
+      {q:"\"portanto\":",o:["mais","donc","ou","car"],a:1,e:"donc"}
+    ]
+  },
+  {
+    id:27, mod:2, t:"Pronomes COD (complemento direto)",
+    tFr:"Les pronoms COD",
+    grammar:`<p>Pronomes que substituem o <b>complemento direto</b> (sem preposição):</p>
+    <table class="conj">
+      <tr><th>Pessoa</th><th>COD</th></tr>
+      <tr><td>me / m'</td><td>me</td></tr>
+      <tr><td>te / t'</td><td>te</td></tr>
+      <tr><td>le / l'</td><td>o / -o (masc.)</td></tr>
+      <tr><td>la / l'</td><td>a / -a (fem.)</td></tr>
+      <tr><td>nous</td><td>nos</td></tr>
+      <tr><td>vous</td><td>vos</td></tr>
+      <tr><td>les</td><td>os/as</td></tr>
+    </table>
+    <p>Colocação: <b>antes</b> do verbo.<br>
+    <i>Tu vois <u>Marie</u>? → Oui, je <b>la</b> vois.</i><br>
+    <i>Vous regardez <u>les films</u>? → Oui, je <b>les</b> regarde.</i></p>
+    <p>No passé composé, o particípio concorda: <i>Je <b>l'</b>ai vu<b>e</b></i> (a Marie).</p>`,
+    vocab:[
+      {fr:"le voir",pt:"vê-lo"},{fr:"la connaître",pt:"conhecê-la"},
+      {fr:"les acheter",pt:"comprá-los"},{fr:"me regarder",pt:"olhar-me"}
+    ],
+    ex:[
+      {fr:"Je le vois souvent.",pt:"Vejo-o frequentemente."},
+      {fr:"Tu m'aimes?",pt:"Amas-me?"},
+      {fr:"Elle les a achetés hier.",pt:"Ela comprou-os ontem."}
+    ],
+    quiz:[
+      {q:"\"Tu vois Marie? — Oui, je ____ vois.\"",o:["le","la","les","lui"],a:1,e:"Marie é fem. sing. → la"},
+      {q:"\"Je regarde les enfants.\" → Je ____ regarde.",o:["le","la","les","leur"],a:2,e:"plural → les"},
+      {q:"Posição do COD em \"Je le vois\":",o:["antes do verbo","depois do verbo","fim da frase","início da frase"],a:0,e:"COD vem antes do verbo"}
+    ]
+  },
+  {
+    id:28, mod:2, t:"Pronomes COI (complemento indireto)",
+    tFr:"Les pronoms COI",
+    grammar:`<p>COI substitui um complemento <b>com a preposição "à"</b> (= a alguém):</p>
+    <table class="conj">
+      <tr><th>Pessoa</th><th>COI</th></tr>
+      <tr><td>me / m'</td><td>a mim</td></tr>
+      <tr><td>te / t'</td><td>a ti</td></tr>
+      <tr><td>lui</td><td>a ele/ela</td></tr>
+      <tr><td>nous</td><td>a nós</td></tr>
+      <tr><td>vous</td><td>a vocês</td></tr>
+      <tr><td>leur</td><td>a eles/elas</td></tr>
+    </table>
+    <p><i>Je parle <b>à Pierre</b>. → Je <b>lui</b> parle.</i><br>
+    <i>J'écris <b>à mes amis</b>. → Je <b>leur</b> écris.</i></p>
+    <p>Verbos comuns com COI: <i>parler à, dire à, donner à, écrire à, téléphoner à, demander à</i>.</p>`,
+    vocab:[
+      {fr:"parler à",pt:"falar com/a"},{fr:"dire à",pt:"dizer a"},
+      {fr:"donner à",pt:"dar a"},{fr:"écrire à",pt:"escrever a"},
+      {fr:"téléphoner à",pt:"telefonar a"},{fr:"demander à",pt:"perguntar a"}
+    ],
+    ex:[
+      {fr:"Je lui téléphone ce soir.",pt:"Telefono-lhe esta noite."},
+      {fr:"Elle leur a parlé.",pt:"Ela falou com eles."},
+      {fr:"Tu m'as donné un livre.",pt:"Deste-me um livro."}
+    ],
+    quiz:[
+      {q:"\"Je parle à Pierre\" → Je ____ parle.",o:["le","lui","leur","la"],a:1,e:"à + pessoa sing. → lui"},
+      {q:"\"J'écris à mes parents\" → Je ____ écris.",o:["les","lui","leur","eux"],a:2,e:"à + plural → leur"},
+      {q:"COD ou COI: \"je le vois\"?",o:["COD","COI","ambos","nenhum"],a:0,e:"voir sem preposição → COD"}
+    ]
+  },
+  {
+    id:29, mod:2, t:"Situer l'action (situar a ação)",
+    tFr:"Situer l'action",
+    grammar:`<p>Expressões para situar no tempo:</p>
+    <ul>
+      <li><code>en ce moment</code> = neste momento · <code>maintenant</code> = agora</li>
+      <li><code>aujourd'hui</code> = hoje · <code>hier</code> = ontem · <code>demain</code> = amanhã</li>
+      <li><code>la veille</code> = no dia anterior · <code>le lendemain</code> = no dia seguinte</li>
+      <li><code>à l'époque</code> = naquela época</li>
+      <li><code>auparavant / autrefois</code> = antigamente</li>
+      <li><code>de nos jours</code> = nos dias de hoje</li>
+    </ul>
+    <p>"Estar a fazer" → <code>être en train de</code> + infinitivo:<br>
+    <i>Je suis <b>en train de</b> manger.</i> = Estou a comer.</p>`,
+    vocab:[
+      {fr:"être en train de",pt:"estar a (fazer algo)"},
+      {fr:"autrefois",pt:"antigamente"},
+      {fr:"de nos jours",pt:"hoje em dia"},
+      {fr:"la veille",pt:"a véspera"},
+      {fr:"le lendemain",pt:"o dia seguinte"}
+    ],
+    ex:[
+      {fr:"Je suis en train d'étudier.",pt:"Estou a estudar."},
+      {fr:"Autrefois, on écrivait des lettres.",pt:"Antigamente escreviam-se cartas."},
+      {fr:"Il est arrivé la veille de Noël.",pt:"Chegou na véspera de Natal."}
+    ],
+    quiz:[
+      {q:"\"Estou a comer\":",o:["Je mange","Je suis en train de manger","Je vais manger","J'ai mangé"],a:1,e:"être en train de + infinitivo"},
+      {q:"\"antigamente\":",o:["maintenant","autrefois","demain","aujourd'hui"],a:1,e:"autrefois"},
+      {q:"\"o dia seguinte\":",o:["la veille","le lendemain","aujourd'hui","ce jour"],a:1,e:"le lendemain"}
+    ]
+  },
+  {
+    id:30, mod:2, t:"Discours rapporté · Ação no tempo",
+    tFr:"Le discours rapporté/L'action dans le temps",
+    grammar:`<p><b>Discurso indireto</b> (no presente): use <code>que</code> + frase.</p>
+    <p>Verbos introdutores: <i>dire que, penser que, croire que, savoir que, espérer que.</i></p>
+    <p><i>Il dit: «Je suis fatigué.» → Il dit <b>qu'</b>il est fatigué.</i></p>
+    <p><b>Ação no tempo:</b></p>
+    <ul>
+      <li><code>venir de</code> + inf = acabar de (passado recente): <i>Je viens de manger.</i></li>
+      <li><code>être en train de</code> + inf = estar a (presente)</li>
+      <li><code>aller</code> + inf = vai (futuro próximo)</li>
+    </ul>`,
+    vocab:[
+      {fr:"penser que",pt:"pensar que"},{fr:"croire que",pt:"acreditar que"},
+      {fr:"savoir que",pt:"saber que"},{fr:"dire que",pt:"dizer que"},
+      {fr:"espérer que",pt:"esperar que"}
+    ],
+    ex:[
+      {fr:"Je pense qu'il est intelligent.",pt:"Acho que ele é inteligente."},
+      {fr:"Elle dit qu'elle vient demain.",pt:"Ela diz que vem amanhã."},
+      {fr:"Je viens d'arriver.",pt:"Acabei de chegar."}
+    ],
+    quiz:[
+      {q:"\"Acabei de comer\":",o:["Je vais manger","J'ai mangé","Je viens de manger","Je suis en train de manger"],a:2,e:"venir de = acabar de"},
+      {q:"\"Ele diz: estou cansado\" → indireto:",o:["Il dit que je suis fatigué","Il dit qu'il est fatigué","Il dit il est fatigué","Il dit être fatigué"],a:1,e:"que + il est"},
+      {q:"\"Penso que sim\":",o:["Je pense que oui","Je pense oui","Je pense si","Je crois oui"],a:0,e:"penser que + oui"}
+    ]
+  },
+  {
+    id:31, mod:2, t:"Caractériser (caracterizar)",
+    tFr:"Caractériser",
+    grammar:`<p>Expressões para descrever:</p>
+    <ul>
+      <li><code>avoir l'air</code> + adjetivo = parecer: <i>Elle <b>a l'air</b> heureuse.</i></li>
+      <li><code>ressembler à</code> = parecer-se com: <i>Il <b>ressemble à</b> son père.</i></li>
+      <li><code>il paraît que</code> = parece que</li>
+    </ul>
+    <p><b>Adjetivos antes ou depois?</b> A maioria vem <b>depois</b>: <i>un livre intéressant</i>. Mas <b>BAGS</b> (Beauty, Age, Goodness, Size) vêm antes:<br>
+    <i>une <b>belle</b> maison, un <b>jeune</b> homme, une <b>bonne</b> idée, un <b>grand</b> jardin.</i></p>`,
+    vocab:[
+      {fr:"avoir l'air",pt:"parecer"},{fr:"ressembler à",pt:"parecer-se com"},
+      {fr:"sembler",pt:"parecer"},{fr:"avoir bonne mine",pt:"ter boa cara"},
+      {fr:"être en forme",pt:"estar em forma"}
+    ],
+    ex:[
+      {fr:"Tu as l'air fatigué.",pt:"Tens cara de cansado."},
+      {fr:"Elle ressemble à sa mère.",pt:"Parece-se com a mãe."},
+      {fr:"C'est une belle maison.",pt:"É uma bela casa."}
+    ],
+    quiz:[
+      {q:"\"Ela parece feliz\":",o:["Elle est heureuse","Elle a l'air heureuse","Elle semble heureusement","A e B"],a:3,e:"avoir l'air ou sembler"},
+      {q:"Posição correta:",o:["une maison belle","une belle maison","une maison de belle","la belle de maison"],a:1,e:"beauty → antes do nome"},
+      {q:"\"Parece-se com o pai\":",o:["Il semble son père","Il ressemble son père","Il ressemble à son père","Il a l'air son père"],a:2,e:"ressembler à + alguém"}
+    ]
+  },
+  {
+    id:32, mod:2, t:"Imperativo com pronome",
+    tFr:"L'impératif avec un pronom",
+    grammar:`<p>No <b>imperativo afirmativo</b>, o pronome vem <b>depois</b> do verbo, ligado por hífen:</p>
+    <ul>
+      <li><i>Donne-<b>moi</b> ce livre!</i> (me → moi após verbo)</li>
+      <li><i>Regarde-<b>la</b>!</i> · <i>Écoute-<b>les</b>!</i></li>
+      <li><i>Va-<b>t'en</b>!</i> = Vai-te embora!</li>
+    </ul>
+    <p>No <b>imperativo negativo</b>, o pronome volta para antes:<br>
+    <i><b>Ne me</b> dis pas ça!</i> · <i><b>Ne le</b> regarde pas!</i></p>
+    <p>Ordem múltiplos pronomes: COD antes de COI no afirmativo, COI antes de COD no negativo. (Detalhe avançado.)</p>`,
+    vocab:[
+      {fr:"Donne-moi!",pt:"Dá-me!"},{fr:"Écoute-le!",pt:"Ouve-o!"},
+      {fr:"Va-t'en!",pt:"Vai-te embora!"},{fr:"Ne me parle pas!",pt:"Não me fales!"}
+    ],
+    ex:[
+      {fr:"Donne-le-moi!",pt:"Dá-mo!"},
+      {fr:"Ne me regarde pas!",pt:"Não me olhes!"},
+      {fr:"Téléphonez-lui!",pt:"Telefone-lhe!"}
+    ],
+    quiz:[
+      {q:"\"Olha-me!\" (imperativo):",o:["Me regarde!","Regarde-me!","Regarde-moi!","Tu me regardes!"],a:2,e:"me vira moi após verbo"},
+      {q:"Negativo: \"Não me digas isto!\"",o:["Dis-moi pas ça!","Ne dis pas moi ça!","Ne me dis pas ça!","Me ne dis pas ça!"],a:2,e:"Ne + pronome + verbo + pas"},
+      {q:"\"Ouve-os!\":",o:["Écoute-eux!","Écoutes-les!","Écoute-les!","Les-écoute!"],a:2,e:"Écoute-les!"}
+    ]
+  },
+  // ============ MODULE 3 ============
+  {
+    id:33, mod:3, t:"Adição, causa, consequência · Futur simple",
+    tFr:"L'addition, la cause, la conséquence + Le futur simple",
+    grammar:`<p><b>Conectores avançados:</b></p>
+    <ul>
+      <li>Adição: <code>de plus, en outre, par ailleurs</code></li>
+      <li>Causa: <code>parce que, car, puisque, étant donné que</code></li>
+      <li>Consequência: <code>donc, alors, c'est pourquoi, par conséquent</code></li>
+    </ul>
+    <p><b>Futur simple</b>: infinitivo + terminações <code>-ai, -as, -a, -ons, -ez, -ont</code>.</p>
+    <p><i>parler → je parler<b>ai</b>, tu parler<b>as</b>, il parler<b>a</b>...</i></p>
+    <p>Em verbos -RE, retira-se o -e final: <i>prendre → je prendr<b>ai</b></i>.</p>`,
+    conj:[
+      {v:"parler (futur)", m:"falarei", f:{je:"parlerai",tu:"parleras",il:"parlera",nous:"parlerons",vous:"parlerez",ils:"parleront"}},
+      {v:"finir (futur)", m:"acabarei", f:{je:"finirai",tu:"finiras",il:"finira",nous:"finirons",vous:"finirez",ils:"finiront"}}
+    ],
+    vocab:[
+      {fr:"étant donné que",pt:"visto que"},{fr:"par conséquent",pt:"consequentemente"},
+      {fr:"c'est pourquoi",pt:"é por isso que"},{fr:"en outre",pt:"além disso"}
+    ],
+    ex:[
+      {fr:"Je parlerai français un jour.",pt:"Falarei francês um dia."},
+      {fr:"Nous finirons demain.",pt:"Acabaremos amanhã."},
+      {fr:"Il pleut, par conséquent on reste.",pt:"Está a chover, portanto ficamos."}
+    ],
+    quiz:[
+      {q:"Futur simple de \"je mange\":",o:["je mangerai","je mangeais","je vais manger","je mange"],a:0,e:"infinitivo + -ai"},
+      {q:"Nous ____ (finir, futur).",o:["finissons","finirons","finissions","finirons"],a:1,e:"Nous finirons"},
+      {q:"\"é por isso que\":",o:["donc","c'est pourquoi","car","puisque"],a:1,e:"c'est pourquoi"}
+    ]
+  },
+  {
+    id:34, mod:3, t:"Futur simple — Exceções",
+    tFr:"Le futur simple - Exceptions",
+    grammar:`<p>Verbos com <b>raiz irregular</b> no futuro (terminações são sempre as mesmas):</p>
+    <table class="conj">
+      <tr><th>Infinitivo</th><th>Raiz futuro</th><th>Exemplo</th></tr>
+      <tr><td>être</td><td>ser-</td><td>je serai</td></tr>
+      <tr><td>avoir</td><td>aur-</td><td>j'aurai</td></tr>
+      <tr><td>aller</td><td>ir-</td><td>j'irai</td></tr>
+      <tr><td>faire</td><td>fer-</td><td>je ferai</td></tr>
+      <tr><td>pouvoir</td><td>pourr-</td><td>je pourrai</td></tr>
+      <tr><td>vouloir</td><td>voudr-</td><td>je voudrai</td></tr>
+      <tr><td>devoir</td><td>devr-</td><td>je devrai</td></tr>
+      <tr><td>venir</td><td>viendr-</td><td>je viendrai</td></tr>
+      <tr><td>voir</td><td>verr-</td><td>je verrai</td></tr>
+      <tr><td>savoir</td><td>saur-</td><td>je saurai</td></tr>
+      <tr><td>il faut</td><td>il faudr-</td><td>il faudra</td></tr>
+    </table>`,
+    vocab:[
+      {fr:"je serai",pt:"serei"},{fr:"j'aurai",pt:"terei"},
+      {fr:"j'irai",pt:"irei"},{fr:"je ferai",pt:"farei"}
+    ],
+    ex:[
+      {fr:"Demain, je serai à Paris.",pt:"Amanhã estarei em Paris."},
+      {fr:"Nous irons au cinéma.",pt:"Iremos ao cinema."},
+      {fr:"Il faudra travailler dur.",pt:"Será preciso trabalhar duro."}
+    ],
+    quiz:[
+      {q:"Futuro de \"être\" (je):",o:["serai","êtrai","aurai","irai"],a:0,e:"être → je serai"},
+      {q:"Futuro de \"aller\" (nous):",o:["allerons","irons","aurons","serons"],a:1,e:"aller → nous irons"},
+      {q:"Futuro de \"faire\" (vous):",o:["ferez","faisirez","fairez","ferons"],a:0,e:"faire → vous ferez"}
+    ]
+  },
+  {
+    id:35, mod:3, t:"Oposição · Ordem · Voz passiva",
+    tFr:"L'opposition, l'ordre, la référence + La voix passive",
+    grammar:`<p><b>Oposição:</b> <code>mais, cependant, pourtant, néanmoins, en revanche, par contre, malgré, bien que</code>.</p>
+    <p><b>Voz passiva:</b> sujeito + <code>être</code> + particípio (concordando).<br>
+    Ativo: <i>Le chef <b>prépare</b> le repas.</i><br>
+    Passivo: <i>Le repas <b>est préparé</b> par le chef.</i></p>
+    <p>Particípio concorda com o sujeito (gênero/número): <i>La porte est ferm<b>ée</b>. Les portes sont ferm<b>ées</b>.</i></p>`,
+    vocab:[
+      {fr:"cependant",pt:"contudo"},{fr:"pourtant",pt:"no entanto"},
+      {fr:"malgré",pt:"apesar de"},{fr:"bien que",pt:"embora"},
+      {fr:"en revanche",pt:"em contrapartida"}
+    ],
+    ex:[
+      {fr:"Il pleut, pourtant je sors.",pt:"Chove, no entanto vou sair."},
+      {fr:"Le livre est lu par Marie.",pt:"O livro é lido por Maria."},
+      {fr:"Malgré la pluie, on part.",pt:"Apesar da chuva, partimos."}
+    ],
+    quiz:[
+      {q:"Passiva de \"Pierre écrit la lettre\":",o:["La lettre écrit Pierre","La lettre est écrite par Pierre","Pierre est écrit la lettre","La lettre a écrit Pierre"],a:1,e:"être + particípio + par"},
+      {q:"\"embora\":",o:["malgré","bien que","cependant","car"],a:1,e:"bien que + subjuntivo"},
+      {q:"Concordância: \"Les portes sont ____\" (fechar):",o:["fermé","fermée","fermés","fermées"],a:3,e:"fem. plural → fermées"}
+    ]
+  },
+  {
+    id:36, mod:3, t:"Demonstrativos (pronomes)",
+    tFr:"Adjectifs, Pronoms démonstratifs",
+    grammar:`<p><b>Pronomes demonstrativos</b> (substituem o substantivo):</p>
+    <table class="conj">
+      <tr><th></th><th>singular</th><th>plural</th></tr>
+      <tr><th>masc.</th><td>celui</td><td>ceux</td></tr>
+      <tr><th>fem.</th><td>celle</td><td>celles</td></tr>
+    </table>
+    <p>Geralmente seguidos de:</p>
+    <ul>
+      <li><code>-ci / -là</code>: <i>celui-ci</i> (este), <i>celui-là</i> (aquele)</li>
+      <li><code>de + nome</code>: <i>celui de Paul</i> = o de Paul</li>
+      <li><code>qui / que</code>: <i>celui qui parle</i> = aquele que fala</li>
+    </ul>
+    <p>Neutros: <code>ce / ceci / cela / ça</code> = isto/isso.</p>`,
+    vocab:[
+      {fr:"celui-ci",pt:"este"},{fr:"celle-là",pt:"aquela"},
+      {fr:"ceux qui",pt:"aqueles que"},{fr:"ça",pt:"isso"}
+    ],
+    ex:[
+      {fr:"Quelle voiture? Celle-ci.",pt:"Que carro? Este."},
+      {fr:"Ceux qui veulent venir, levez la main.",pt:"Os que querem vir, levantem a mão."},
+      {fr:"Ça, c'est intéressant!",pt:"Isso é interessante!"}
+    ],
+    quiz:[
+      {q:"\"o de Paul\":",o:["ce de Paul","celle de Paul","celui de Paul","ça de Paul"],a:2,e:"masc. sing. → celui"},
+      {q:"\"aquelas que vêm\":",o:["celles qui viennent","celle qui viennent","ceux qui viennent","celles que viennent"],a:0,e:"celles + qui (sujeito)"},
+      {q:"\"isto não é bom\":",o:["ce n'est pas bon","ça n'est pas bon","ceci n'est pas bon","todas corretas"],a:3,e:"Todas funcionam"}
+    ]
+  },
+  {
+    id:37, mod:3, t:"Condição · Finalidade · Laisser/Faire/Rendre",
+    tFr:"La condition, la finalité + Laisser/Faire/Rendre + infinitif/adj",
+    grammar:`<p><b>Condição:</b> <code>si</code> + presente, futuro/presente:<br>
+    <i>Si tu viens, je serai content.</i></p>
+    <p><b>Finalidade:</b> <code>pour, afin de</code> + infinitivo; <code>pour que, afin que</code> + subjuntivo.<br>
+    <i>J'étudie <b>pour</b> réussir.</i> · <i>Je te le dis <b>pour que</b> tu saches.</i></p>
+    <p><b>Faire + infinitivo</b> = mandar/fazer com que: <i>Je <b>fais</b> réparer ma voiture.</i> = Mando arranjar.</p>
+    <p><b>Laisser + infinitivo</b> = deixar: <i>Laisse-moi parler.</i></p>
+    <p><b>Rendre + adjetivo</b> = tornar: <i>Ça me <b>rend</b> heureux.</i></p>`,
+    vocab:[
+      {fr:"pour",pt:"para"},{fr:"afin de",pt:"a fim de"},
+      {fr:"faire faire",pt:"mandar fazer"},{fr:"laisser",pt:"deixar"},
+      {fr:"rendre heureux",pt:"tornar feliz"}
+    ],
+    ex:[
+      {fr:"Je fais laver ma voiture.",pt:"Mando lavar o carro."},
+      {fr:"Cette musique me rend triste.",pt:"Esta música deixa-me triste."},
+      {fr:"Si tu veux, on sort.",pt:"Se quiseres, saímos."}
+    ],
+    quiz:[
+      {q:"\"Mando reparar o carro\":",o:["Je répare ma voiture","Je fais réparer ma voiture","Je laisse réparer","Je rends réparer"],a:1,e:"faire + infinitivo = mandar"},
+      {q:"\"Deixa-me dormir\":",o:["Fais-moi dormir","Laisse-moi dormir","Rends-moi dormir","Je dors"],a:1,e:"laisser = deixar"},
+      {q:"\"Si\" + qual tempo?",o:["futuro","condicional","presente do indicativo","subjuntivo"],a:2,e:"si + presente, depois futuro"}
+    ]
+  },
+  {
+    id:38, mod:3, t:"Le gérondif · Le participe présent",
+    tFr:"Le gérondif, le participe présent",
+    grammar:`<p><b>Participe présent</b>: raiz do nous + <code>-ant</code>.<br>
+    <i>nous parl<b>ons</b> → parl<b>ant</b></i>. Expressa simultaneidade ou causa.</p>
+    <p>Exceções: <i>être→étant, avoir→ayant, savoir→sachant</i>.</p>
+    <p><b>Gérondif</b>: <code>en</code> + participe présent. Indica:</p>
+    <ul>
+      <li>Simultaneidade: <i>Il chante <b>en travaillant</b>.</i> = Canta enquanto trabalha.</li>
+      <li>Modo: <i>Il est tombé <b>en courant</b>.</i> = Caiu correndo.</li>
+      <li>Condição: <i><b>En étudiant</b>, tu réussiras.</i></li>
+    </ul>`,
+    vocab:[
+      {fr:"en parlant",pt:"falando"},{fr:"en mangeant",pt:"comendo"},
+      {fr:"étant",pt:"sendo"},{fr:"ayant",pt:"tendo"},
+      {fr:"sachant",pt:"sabendo"}
+    ],
+    ex:[
+      {fr:"Il étudie en écoutant de la musique.",pt:"Ele estuda ouvindo música."},
+      {fr:"En partant tôt, tu arriveras à l'heure.",pt:"Partindo cedo, chegarás a horas."},
+      {fr:"Ayant fini, il est sorti.",pt:"Tendo acabado, saiu."}
+    ],
+    quiz:[
+      {q:"Gérondif de \"manger\":",o:["mangeant","en mangeant","mangé","mangeons"],a:1,e:"en + particípio presente"},
+      {q:"\"Sendo cansado\" (participle):",o:["en étant fatigué","étant fatigué","faisant fatigué","fatigant"],a:1,e:"étant + adjetivo"},
+      {q:"O gérondif exprime:",o:["futuro","condicional","simultaneidade","passado simples"],a:2,e:"Ação simultânea"}
+    ]
+  },
+  {
+    id:39, mod:3, t:"Artigo após negação",
+    tFr:"L'article après une négation",
+    grammar:`<p>Em frase <b>negativa</b>, os artigos <code>un, une, des</code> e os partitivos <code>du, de la, des</code> tornam-se <code>de</code> (ou <code>d'</code>):</p>
+    <ul>
+      <li><i>J'ai un chat.</i> → <i>Je n'ai pas <b>de</b> chat.</i></li>
+      <li><i>Je bois du vin.</i> → <i>Je ne bois pas <b>de</b> vin.</i></li>
+      <li><i>Il y a des problèmes.</i> → <i>Il n'y a pas <b>de</b> problèmes.</i></li>
+    </ul>
+    <p>⚠️ <b>Exceção</b>: com o verbo <code>être</code>, o artigo NÃO muda:<br>
+    <i>C'est un chat. → Ce n'est pas <b>un</b> chat.</i></p>
+    <p>Artigos definidos (le, la, les) também NÃO mudam:<br>
+    <i>J'aime le café. → Je n'aime pas <b>le</b> café.</i></p>`,
+    vocab:[
+      {fr:"pas de",pt:"nenhum"},{fr:"plus de",pt:"não mais"},
+      {fr:"jamais de",pt:"nunca"},{fr:"aucun(e)",pt:"nenhum(a)"}
+    ],
+    ex:[
+      {fr:"Je n'ai pas de voiture.",pt:"Não tenho carro."},
+      {fr:"Il n'y a plus de pain.",pt:"Já não há pão."},
+      {fr:"Ce n'est pas un problème.",pt:"Não é um problema."}
+    ],
+    quiz:[
+      {q:"Negação de \"J'ai un chien\":",o:["Je n'ai pas un chien","Je n'ai pas de chien","Je n'ai un pas chien","Je ne pas ai chien"],a:1,e:"un → de na negação"},
+      {q:"Negação de \"C'est un livre\":",o:["Ce n'est pas un livre","Ce n'est pas de livre","Ce ne pas est livre","Ce n'est de livre"],a:0,e:"Exceção: être mantém artigo"},
+      {q:"Negação de \"Je bois du café\":",o:["Je ne bois du café","Je ne bois pas du café","Je ne bois pas de café","Je ne bois pas le café"],a:2,e:"du → de na negação"}
+    ]
+  },
+  {
+    id:40, mod:3, t:"Le conditionnel · Le conditionnel passé",
+    tFr:"Le conditionnel, le conditionnel passé",
+    grammar:`<p><b>Conditionnel présent</b> = "eu falaria, eu iria…". Formação: raiz do <i>futur simple</i> + terminações do <i>imparfait</i> (<code>-ais, -ais, -ait, -ions, -iez, -aient</code>).</p>
+    <p><i>je parler<b>ais</b>, tu parler<b>ais</b>, il parler<b>ait</b>...</i></p>
+    <p>Usos: pedido educado (<i>Je <b>voudrais</b> un café</i>), conselho (<i>Tu <b>devrais</b> dormir</i>), hipótese (<i>Si j'avais le temps, je <b>viendrais</b></i>).</p>
+    <p><b>Conditionnel passé</b>: <code>avoir/être</code> no condicional + particípio.<br>
+    <i>J'<b>aurais aimé</b> venir.</i> = Teria gostado de vir.</p>`,
+    conj:[
+      {v:"parler (cond.)", m:"falaria", f:{je:"parlerais",tu:"parlerais",il:"parlerait",nous:"parlerions",vous:"parleriez",ils:"parleraient"}},
+      {v:"vouloir (cond.)", m:"gostaria", f:{je:"voudrais",tu:"voudrais",il:"voudrait",nous:"voudrions",vous:"voudriez",ils:"voudraient"}}
+    ],
+    vocab:[
+      {fr:"je voudrais",pt:"eu gostaria"},{fr:"tu devrais",pt:"tu deverias"},
+      {fr:"on pourrait",pt:"poder-se-ia"},{fr:"j'aurais aimé",pt:"teria gostado"}
+    ],
+    ex:[
+      {fr:"Je voudrais un café, s'il vous plaît.",pt:"Queria um café, por favor."},
+      {fr:"Tu devrais te reposer.",pt:"Devias descansar."},
+      {fr:"J'aurais aimé venir hier.",pt:"Teria gostado de vir ontem."}
+    ],
+    quiz:[
+      {q:"Condicional de \"je veux\":",o:["je voudrai","je voudrais","je voulais","je voulu"],a:1,e:"voudr- + -ais"},
+      {q:"Para pedidos educados, usa-se:",o:["presente","passé composé","conditionnel","subjuntivo"],a:2,e:"Je voudrais... = mais educado"},
+      {q:"Conditionnel passé de \"venir\" (je):",o:["je viendrais","je serais venu","je suis venu","j'aurais venu"],a:1,e:"être no condicional + particípio"}
+    ]
+  },
+  {
+    id:41, mod:3, t:"Le plus-que-parfait",
+    tFr:"Le plus-que-parfait",
+    grammar:`<p>O <b>plus-que-parfait</b> = passado anterior a outro passado ("tinha falado").</p>
+    <p>Formação: <code>avoir/être</code> no <b>imparfait</b> + particípio passado.</p>
+    <ul>
+      <li><i>J'<b>avais mangé</b>.</i> = Tinha comido.</li>
+      <li><i>Tu <b>étais parti</b>.</i> = Tinhas partido.</li>
+    </ul>
+    <p>Uso típico: <i>Quand je suis arrivé, il <b>avait déjà mangé</b>.</i> = Quando cheguei, ele já tinha comido.</p>`,
+    vocab:[
+      {fr:"déjà",pt:"já"},{fr:"avant que",pt:"antes que"},
+      {fr:"j'avais fini",pt:"eu tinha acabado"},{fr:"il était parti",pt:"ele tinha partido"}
+    ],
+    ex:[
+      {fr:"J'avais déjà fini quand tu es arrivé.",pt:"Já tinha acabado quando chegaste."},
+      {fr:"Elle était partie avant 8h.",pt:"Ela tinha partido antes das 8h."},
+      {fr:"Nous avions oublié les clés.",pt:"Tínhamos esquecido as chaves."}
+    ],
+    quiz:[
+      {q:"Plus-que-parfait de \"manger\" (je):",o:["j'ai mangé","j'avais mangé","je mangeais","je mangerais"],a:1,e:"avais + particípio"},
+      {q:"\"Tinha partido\" (Elle):",o:["elle a parti","elle était partie","elle avait parti","elle parti"],a:1,e:"partir usa être → était partie"},
+      {q:"O plus-que-parfait exprime:",o:["futuro","passado antes de outro passado","presente","condicional"],a:1,e:"Anterioridade no passado"}
+    ]
+  },
+  {
+    id:42, mod:3, t:"Faire des hypothèses (hipóteses)",
+    tFr:"Faire des hypothèses",
+    grammar:`<p>Três tipos de hipóteses com <code>si</code>:</p>
+    <table class="conj">
+      <tr><th>Tipo</th><th>Se +</th><th>Resultado</th></tr>
+      <tr><td>1. Possível</td><td>présent</td><td>futur / présent</td></tr>
+      <tr><td>2. Irreal (presente)</td><td>imparfait</td><td>conditionnel présent</td></tr>
+      <tr><td>3. Irreal (passado)</td><td>plus-que-parfait</td><td>conditionnel passé</td></tr>
+    </table>
+    <p>Exemplos:</p>
+    <ul>
+      <li><i><b>Si</b> tu viens, on <b>ira</b> au ciné.</i> (provável)</li>
+      <li><i><b>Si</b> j'<b>étais</b> riche, j'<b>achèterais</b> un château.</i> (imaginário)</li>
+      <li><i><b>Si</b> j'<b>avais su</b>, je ne <b>serais</b> pas <b>venu</b>.</i> (passado irreal)</li>
+    </ul>
+    <p>⚠️ Nunca usar futuro nem condicional <b>depois</b> de "si"!</p>`,
+    vocab:[
+      {fr:"si j'étais riche",pt:"se eu fosse rico"},
+      {fr:"si j'avais su",pt:"se eu soubesse"},
+      {fr:"à ta place",pt:"no teu lugar"}
+    ],
+    ex:[
+      {fr:"Si j'avais le temps, je voyagerais.",pt:"Se tivesse tempo, viajaria."},
+      {fr:"Si tu travailles, tu réussiras.",pt:"Se trabalhares, terás sucesso."},
+      {fr:"Si j'avais étudié, j'aurais réussi.",pt:"Se tivesse estudado, teria passado."}
+    ],
+    quiz:[
+      {q:"Hipótese irreal presente: \"Se eu fosse rico, viajaria\":",o:["Si je suis riche, je voyage","Si j'étais riche, je voyagerais","Si je serais riche, je voyagerais","Si je suis riche, je voyagerai"],a:1,e:"Imparfait + conditionnel"},
+      {q:"Hipótese provável: \"Se vieres, comemos\":",o:["Si tu viens, on mange","Si tu venais, on mangerait","Si tu serais venu, on mangerait","Si tu viendrais, on mange"],a:0,e:"Présent + présent/futur"},
+      {q:"Erro a evitar: NUNCA usar ____ após \"si\":",o:["presente","passado","futuro/condicional","subjuntivo"],a:2,e:"Nunca futur ou conditionnel após si"}
+    ]
+  },
+  // ============ MODULE 4 ============
+  {
+    id:43, mod:4, t:"Le discours indirect (passé)",
+    tFr:"Le discours indirect / Le discours indirect passé",
+    grammar:`<p>Quando o verbo introdutor está no <b>passado</b>, os tempos da fala mudam:</p>
+    <table class="conj">
+      <tr><th>Discurso direto</th><th>Discurso indireto (passado)</th></tr>
+      <tr><td>présent</td><td>imparfait</td></tr>
+      <tr><td>passé composé</td><td>plus-que-parfait</td></tr>
+      <tr><td>futur</td><td>conditionnel</td></tr>
+    </table>
+    <p>Exemplos:</p>
+    <ul>
+      <li><i>Il a dit: «Je <b>suis</b> fatigué.» → Il a dit qu'il <b>était</b> fatigué.</i></li>
+      <li><i>Elle a dit: «J'<b>ai mangé</b>.» → Elle a dit qu'elle <b>avait mangé</b>.</i></li>
+      <li><i>Il a dit: «Je <b>viendrai</b>.» → Il a dit qu'il <b>viendrait</b>.</i></li>
+    </ul>`,
+    vocab:[
+      {fr:"il a dit que",pt:"ele disse que"},
+      {fr:"elle a demandé si",pt:"ela perguntou se"},
+      {fr:"il a expliqué que",pt:"explicou que"}
+    ],
+    ex:[
+      {fr:"Elle a dit qu'elle était malade.",pt:"Ela disse que estava doente."},
+      {fr:"Il a affirmé qu'il avait fini.",pt:"Afirmou que tinha acabado."},
+      {fr:"On a annoncé qu'il pleuvrait.",pt:"Anunciou-se que choveria."}
+    ],
+    quiz:[
+      {q:"\"Il a dit: je viens\" → indireto:",o:["Il a dit qu'il vient","Il a dit qu'il venait","Il a dit qu'il est venu","Il a dit qu'il viendrait"],a:1,e:"présent → imparfait"},
+      {q:"\"Je viendrai\" → indireto passado:",o:["il viendra","il viendrait","il vient","il venait"],a:1,e:"futur → conditionnel"},
+      {q:"\"J'ai fini\" → indireto passado:",o:["il a fini","il avait fini","il finirait","il finit"],a:1,e:"passé composé → plus-que-parfait"}
+    ]
+  },
+  {
+    id:44, mod:4, t:"Le pronom EN",
+    tFr:"Le pronom EN",
+    grammar:`<p><b>EN</b> substitui:</p>
+    <ul>
+      <li>Complemento com <code>de</code>: <i>Je parle <b>de</b> mes vacances. → J'<b>en</b> parle.</i></li>
+      <li>Partitivos (du, de la, des): <i>Tu manges du pain? → Oui, j'<b>en</b> mange.</i></li>
+      <li>Quantidade: <i>Combien de livres? — J'<b>en</b> ai trois.</i> (mantém-se o número)</li>
+      <li>Lugar de origem: <i>Tu viens de Paris? — J'<b>en</b> viens.</i></li>
+    </ul>
+    <p>Posição: <b>antes</b> do verbo (igual aos outros pronomes).</p>`,
+    vocab:[
+      {fr:"j'en ai",pt:"tenho deles/disso"},
+      {fr:"j'en veux",pt:"quero disso"},
+      {fr:"j'en viens",pt:"venho de lá"}
+    ],
+    ex:[
+      {fr:"Tu veux du café? — Oui, j'en veux.",pt:"Queres café? — Sim, quero."},
+      {fr:"Combien d'enfants? — J'en ai deux.",pt:"Quantos filhos? — Tenho dois."},
+      {fr:"On parle souvent de ce film. → On en parle souvent.",pt:"Falamos muito desse filme. → Falamos muito disso."}
+    ],
+    quiz:[
+      {q:"\"Tu manges du pain?\" → Oui, j' ____ mange.",o:["le","en","y","la"],a:1,e:"partitivo → en"},
+      {q:"\"J'ai trois chats\" → J' ____ ai trois.",o:["les","en","y","leur"],a:1,e:"quantidade → en + número"},
+      {q:"\"Je parle de mes vacances\" → Je ____ parle.",o:["les","leur","en","y"],a:2,e:"parler de → en"}
+    ]
+  },
+  {
+    id:45, mod:4, t:"Le pronom Y",
+    tFr:"Le pronom Y",
+    grammar:`<p><b>Y</b> substitui:</p>
+    <ul>
+      <li>Lugar (com <code>à, en, dans, chez, sur, sous</code>...): <i>Je vais <b>à Paris</b>. → J'<b>y</b> vais.</i></li>
+      <li>Complemento com <code>à</code> (coisa, NÃO pessoa): <i>Je pense <b>à mes examens</b>. → J'<b>y</b> pense.</i></li>
+    </ul>
+    <p>⚠️ Para pessoa, usa-se COI (lui/leur), não Y:<br>
+    <i>Je pense à <b>Pierre</b>. → Je pense à <b>lui</b>.</i> (não "j'y pense")</p>`,
+    vocab:[
+      {fr:"j'y vais",pt:"vou lá"},
+      {fr:"j'y pense",pt:"penso nisso"},
+      {fr:"j'y crois",pt:"acredito nisso"}
+    ],
+    ex:[
+      {fr:"Tu vas au cinéma? — Oui, j'y vais.",pt:"Vais ao cinema? — Sim, vou."},
+      {fr:"Tu penses à tes vacances? — J'y pense.",pt:"Pensas nas férias? — Penso nelas."},
+      {fr:"Elle habite à Paris depuis 3 ans. → Elle y habite depuis 3 ans.",pt:"Ela mora em Paris há 3 anos. → Mora lá há 3 anos."}
+    ],
+    quiz:[
+      {q:"\"Je vais à Paris\" → J' ____ vais.",o:["en","y","le","la"],a:1,e:"lugar → y"},
+      {q:"\"Je pense à mon travail\" → J' ____ pense.",o:["le","lui","y","en"],a:2,e:"à + coisa → y"},
+      {q:"\"Je pense à Marie\" → Je pense à ____ .",o:["y","elle","la","lui"],a:1,e:"à + pessoa → tônico ou COI"}
+    ]
+  },
+  {
+    id:46, mod:4, t:"Pronomes possessivos",
+    tFr:"Les adjectifs possessifs, la possession, les pronoms possessifs",
+    grammar:`<p><b>Pronomes possessivos</b> (substituem nome + possessivo). Levam artigo!</p>
+    <table class="conj">
+      <tr><th></th><th>masc. sing.</th><th>fem. sing.</th><th>masc. plur.</th><th>fem. plur.</th></tr>
+      <tr><td>meu(s)</td><td>le mien</td><td>la mienne</td><td>les miens</td><td>les miennes</td></tr>
+      <tr><td>teu(s)</td><td>le tien</td><td>la tienne</td><td>les tiens</td><td>les tiennes</td></tr>
+      <tr><td>dele(s)</td><td>le sien</td><td>la sienne</td><td>les siens</td><td>les siennes</td></tr>
+      <tr><td>nosso</td><td>le nôtre</td><td>la nôtre</td><td>les nôtres</td><td>les nôtres</td></tr>
+      <tr><td>vosso</td><td>le vôtre</td><td>la vôtre</td><td>les vôtres</td><td>les vôtres</td></tr>
+      <tr><td>deles</td><td>le leur</td><td>la leur</td><td>les leurs</td><td>les leurs</td></tr>
+    </table>
+    <p><i>C'est ma voiture, pas <b>la tienne</b>.</i></p>`,
+    vocab:[
+      {fr:"le mien",pt:"o meu"},{fr:"la sienne",pt:"a dele/dela"},
+      {fr:"les nôtres",pt:"os nossos"},{fr:"le leur",pt:"o deles"}
+    ],
+    ex:[
+      {fr:"C'est ton stylo? Non, c'est le mien.",pt:"É a tua caneta? Não, é a minha."},
+      {fr:"Notre maison est plus grande que la vôtre.",pt:"A nossa casa é maior que a vossa."},
+      {fr:"Ma sœur et la sienne.",pt:"A minha irmã e a dele."}
+    ],
+    quiz:[
+      {q:"\"a minha bicicleta\" (pronome):",o:["mien","la mienne","ma","le mien"],a:1,e:"bicicleta fem. sing. → la mienne"},
+      {q:"\"os deles\" (pronome):",o:["leur","leurs","les leur","les leurs"],a:3,e:"plural → les leurs"},
+      {q:"\"o nosso carro\" (pronome):",o:["nôtre","le nôtre","les nôtres","la nôtre"],a:1,e:"masc. sing. → le nôtre"}
+    ]
+  },
+  {
+    id:47, mod:4, t:"Pronomes relativos compostos",
+    tFr:"Les pronoms relatifs composés",
+    grammar:`<p>Os relativos compostos usam-se depois de preposições.</p>
+    <table class="conj">
+      <tr><th></th><th>masc. sing.</th><th>fem. sing.</th><th>masc. plur.</th><th>fem. plur.</th></tr>
+      <tr><td>de base</td><td>lequel</td><td>laquelle</td><td>lesquels</td><td>lesquelles</td></tr>
+      <tr><td>com à</td><td>auquel</td><td>à laquelle</td><td>auxquels</td><td>auxquelles</td></tr>
+      <tr><td>com de</td><td>duquel</td><td>de laquelle</td><td>desquels</td><td>desquelles</td></tr>
+    </table>
+    <p><i>Le livre <b>auquel</b> je pense est rouge.</i> = O livro no qual penso é vermelho.<br>
+    <i>La fille <b>avec laquelle</b> je travaille.</i> = A rapariga com quem trabalho.</p>
+    <p>Para pessoas, pode-se usar <code>qui</code>: <i>la fille avec <b>qui</b> je travaille</i>.</p>`,
+    vocab:[
+      {fr:"avec qui / lequel",pt:"com quem / o qual"},
+      {fr:"à qui / auquel",pt:"a quem / ao qual"},
+      {fr:"dont",pt:"de que/quem (relativo)"}
+    ],
+    ex:[
+      {fr:"La maison dans laquelle j'habite.",pt:"A casa na qual moro."},
+      {fr:"Le projet auquel je pense.",pt:"O projeto no qual penso."},
+      {fr:"L'ami avec lequel je sors.",pt:"O amigo com quem saio."}
+    ],
+    quiz:[
+      {q:"\"o livro do qual falo\":",o:["le livre dont je parle","le livre lequel je parle","le livre que je parle","le livre où je parle"],a:0,e:"de + livre → dont"},
+      {q:"\"a casa na qual moro\":",o:["la maison dans laquelle j'habite","la maison dans lequel j'habite","la maison dans qui j'habite","la maison auquel j'habite"],a:0,e:"dans + fem. → dans laquelle"},
+      {q:"à + lequel =",o:["à lequel","auquel","aulequel","à le quel"],a:1,e:"contração obrigatória"}
+    ]
+  },
+  {
+    id:48, mod:4, t:"Generalizar · Futur antérieur",
+    tFr:"Généraliser + Le futur antérieur",
+    grammar:`<p><b>Generalizar:</b> uso de <code>on</code> = "a gente / pessoas em geral".<br>
+    <i><b>On</b> dit que c'est facile.</i> = Dizem que é fácil.</p>
+    <p>Outros: <code>quelqu'un</code> (alguém), <code>tout le monde</code> (toda a gente), <code>personne</code> (ninguém), <code>certains</code> (alguns).</p>
+    <p><b>Futur antérieur</b> = ação no futuro <i>terminada antes</i> de outra. Formação: <code>avoir/être</code> no futur simple + particípio.</p>
+    <p><i>Quand tu <b>arriveras</b>, j'<b>aurai fini</b>.</i> = Quando chegares, eu já terei acabado.</p>`,
+    vocab:[
+      {fr:"on dit que",pt:"diz-se que"},{fr:"tout le monde",pt:"toda a gente"},
+      {fr:"personne ne",pt:"ninguém"},{fr:"j'aurai fini",pt:"terei acabado"}
+    ],
+    ex:[
+      {fr:"On parle français au Québec.",pt:"Fala-se francês no Quebec."},
+      {fr:"Quand tu arriveras, j'aurai préparé le dîner.",pt:"Quando chegares, terei feito o jantar."},
+      {fr:"Personne n'est venu.",pt:"Ninguém veio."}
+    ],
+    quiz:[
+      {q:"\"Diz-se que…\":",o:["Il dit que","On dit que","Quelqu'un dit que","Personne dit que"],a:1,e:"On = forma impessoal"},
+      {q:"Futur antérieur de \"finir\" (j'):",o:["finirai","aurai fini","avais fini","aurais fini"],a:1,e:"aurai + particípio"},
+      {q:"\"Ninguém veio\":",o:["Personne est venu","Personne n'est venu","Aucun est venu","Ne personne est venu"],a:1,e:"personne + ne + verbo"}
+    ]
+  },
+  {
+    id:49, mod:4, t:"Le subjonctif présent",
+    tFr:"Le subjonctif présent",
+    grammar:`<p>O <b>subjuntivo</b> exprime sentimento, dúvida, vontade, obrigação. Sempre após <code>que</code>.</p>
+    <p><b>Formação:</b> raiz da 3ª pessoa do plural (ils) + terminações <code>-e, -es, -e, -ions, -iez, -ent</code>.</p>
+    <p><i>ils parl<b>ent</b> → que je parl<b>e</b>, que nous parl<b>ions</b></i></p>
+    <p><b>Usado depois de:</b></p>
+    <ul>
+      <li><i>il faut que, il est nécessaire que</i></li>
+      <li><i>je veux que, je souhaite que</i></li>
+      <li><i>j'ai peur que, je suis content que</i></li>
+      <li><i>bien que, pour que, avant que, jusqu'à ce que</i></li>
+    </ul>`,
+    conj:[
+      {v:"parler (subj.)", m:"que eu fale", f:{je:"que je parle",tu:"que tu parles",il:"qu'il parle",nous:"que nous parlions",vous:"que vous parliez",ils:"qu'ils parlent"}}
+    ],
+    vocab:[
+      {fr:"il faut que",pt:"é preciso que"},{fr:"je veux que",pt:"quero que"},
+      {fr:"avant que",pt:"antes que"},{fr:"bien que",pt:"embora"}
+    ],
+    ex:[
+      {fr:"Il faut que tu viennes.",pt:"É preciso que venhas."},
+      {fr:"Je veux que tu sois heureux.",pt:"Quero que sejas feliz."},
+      {fr:"Bien qu'il pleuve, je sors.",pt:"Embora chova, vou sair."}
+    ],
+    quiz:[
+      {q:"\"Quero que tu venhas\":",o:["Je veux que tu viens","Je veux que tu viennes","Je veux tu venir","Je veux que tu venir"],a:1,e:"vouloir que + subjuntivo"},
+      {q:"Subjuntivo de \"manger\" (que je):",o:["mangerai","mangeais","mange","mangerais"],a:2,e:"que je mange"},
+      {q:"Após \"bien que\":",o:["indicativo","subjuntivo","condicional","infinitivo"],a:1,e:"bien que + subjuntivo"}
+    ]
+  },
+  {
+    id:50, mod:4, t:"Subjonctif — Exceções",
+    tFr:"Le subjonctif - Exceptions",
+    grammar:`<p>Verbos com formas <b>irregulares</b> no subjuntivo:</p>
+    <table class="conj">
+      <tr><th>Verbo</th><th>que je</th><th>que nous</th></tr>
+      <tr><td>être</td><td>sois</td><td>soyons</td></tr>
+      <tr><td>avoir</td><td>aie</td><td>ayons</td></tr>
+      <tr><td>aller</td><td>aille</td><td>allions</td></tr>
+      <tr><td>faire</td><td>fasse</td><td>fassions</td></tr>
+      <tr><td>pouvoir</td><td>puisse</td><td>puissions</td></tr>
+      <tr><td>savoir</td><td>sache</td><td>sachions</td></tr>
+      <tr><td>vouloir</td><td>veuille</td><td>voulions</td></tr>
+      <tr><td>il faut</td><td>—</td><td>qu'il faille</td></tr>
+    </table>
+    <p><i>Il faut que tu <b>sois</b> à l'heure.</i> · <i>Je veux que vous <b>fassiez</b> attention.</i></p>`,
+    vocab:[
+      {fr:"que je sois",pt:"que eu seja"},{fr:"que j'aie",pt:"que eu tenha"},
+      {fr:"que je fasse",pt:"que eu faça"},{fr:"que j'aille",pt:"que eu vá"}
+    ],
+    ex:[
+      {fr:"Il faut que tu sois sage.",pt:"É preciso que sejas comportado."},
+      {fr:"Je veux qu'il fasse ses devoirs.",pt:"Quero que ele faça os deveres."},
+      {fr:"Il est important qu'on puisse parler.",pt:"É importante que possamos falar."}
+    ],
+    quiz:[
+      {q:"Subjuntivo de \"être\" (que tu):",o:["sois","es","sera","était"],a:0,e:"que tu sois"},
+      {q:"Subjuntivo de \"aller\" (que nous):",o:["allions","ayons","irions","ayions"],a:0,e:"que nous allions"},
+      {q:"Subjuntivo de \"faire\" (qu'ils):",o:["font","fassent","fissent","feront"],a:1,e:"qu'ils fassent"}
+    ]
+  },
+  {
+    id:51, mod:4, t:"Pronomes relativos (qui, que, dont, où)",
+    tFr:"Pronoms relatifs",
+    grammar:`<p>Relativos simples — ligam duas frases:</p>
+    <ul>
+      <li><code>qui</code> = sujeito da oração subordinada: <i>L'homme <b>qui</b> parle.</i></li>
+      <li><code>que</code> = COD: <i>Le livre <b>que</b> je lis.</i></li>
+      <li><code>dont</code> = complemento com <code>de</code>: <i>Le livre <b>dont</b> je parle.</i></li>
+      <li><code>où</code> = lugar/tempo: <i>La ville <b>où</b> je vis. Le jour <b>où</b> je suis né.</i></li>
+    </ul>
+    <p>⚠️ "que" elide-se antes de vogal: <i>l'homme <b>qu'</b>il connaît</i>. "qui" nunca elide.</p>`,
+    vocab:[
+      {fr:"qui",pt:"que (sujeito)"},{fr:"que",pt:"que (objeto)"},
+      {fr:"dont",pt:"de que / cujo"},{fr:"où",pt:"onde / quando"}
+    ],
+    ex:[
+      {fr:"L'ami qui habite à Paris.",pt:"O amigo que mora em Paris."},
+      {fr:"Le film que j'ai vu.",pt:"O filme que vi."},
+      {fr:"La maison dont j'ai parlé.",pt:"A casa de que falei."}
+    ],
+    quiz:[
+      {q:"\"O homem que fala\":",o:["L'homme que parle","L'homme qui parle","L'homme dont parle","L'homme où parle"],a:1,e:"sujeito → qui"},
+      {q:"\"O livro que leio\":",o:["Le livre qui je lis","Le livre que je lis","Le livre dont je lis","Le livre où je lis"],a:1,e:"COD → que"},
+      {q:"\"A loja onde compro\":",o:["Le magasin que j'achète","Le magasin qui j'achète","Le magasin où j'achète","Le magasin dont j'achète"],a:2,e:"lugar → où"}
+    ]
+  },
+  {
+    id:52, mod:4, t:"Le passé simple",
+    tFr:"Le passé simple",
+    grammar:`<p>O <b>passé simple</b> = passado <b>literário</b> (livros, contos, jornais formais). Não se usa na conversa — equivale ao passé composé.</p>
+    <p><b>Formação:</b></p>
+    <ul>
+      <li>Verbos -ER: <i>parl<b>ai</b>, parl<b>as</b>, parl<b>a</b>, parl<b>âmes</b>, parl<b>âtes</b>, parl<b>èrent</b></i></li>
+      <li>Verbos -IR / -RE: <i>fin<b>is</b>, fin<b>is</b>, fin<b>it</b>, fin<b>îmes</b>, fin<b>îtes</b>, fin<b>irent</b></i></li>
+    </ul>
+    <p>Irregulares comuns:</p>
+    <ul>
+      <li>être → <i>je fus, tu fus, il fut, nous fûmes...</i></li>
+      <li>avoir → <i>j'eus, tu eus, il eut, nous eûmes...</i></li>
+      <li>faire → <i>je fis, il fit, ils firent</i></li>
+      <li>venir → <i>je vins, il vint, ils vinrent</i></li>
+    </ul>
+    <p>Forma mais comum em leitura: <b>3ª pessoa</b> (il/elle/ils/elles).</p>`,
+    vocab:[
+      {fr:"il fut",pt:"foi (ser, literário)"},{fr:"elle eut",pt:"teve (literário)"},
+      {fr:"ils dirent",pt:"disseram"},{fr:"il vint",pt:"veio"}
+    ],
+    ex:[
+      {fr:"Il fut roi pendant 20 ans.",pt:"Foi rei durante 20 anos."},
+      {fr:"Ils arrivèrent au château.",pt:"Chegaram ao castelo."},
+      {fr:"Elle eut une idée.",pt:"Teve uma ideia."}
+    ],
+    quiz:[
+      {q:"Passé simple é usado em:",o:["conversação","romances/contos","emails","redes sociais"],a:1,e:"Registro literário"},
+      {q:"Passé simple de \"être\" (il):",o:["fut","était","a été","est"],a:0,e:"il fut"},
+      {q:"Passé simple de \"parler\" (il):",o:["parle","parla","parlait","parlé"],a:1,e:"il parla (-a)"}
+    ]
+  }
+];
+
+// =====================================================
+// APLICAÇÃO
+// =====================================================
+let currentMode = 'learn';
+let currentLessonId = 1;
+let flashState = { idx: 0, deck: [], lessonFilter: 'all' };
+let quizState = {};
+let conjState = { idx: 0, score: 0, total: 0, verbs: [], currentTask: null };
+
+const PRONOUNS = [
+  {key:'je', label:'Je / J\''},
+  {key:'tu', label:'Tu'},
+  {key:'il', label:'Il / Elle'},
+  {key:'nous', label:'Nous'},
+  {key:'vous', label:'Vous'},
+  {key:'ils', label:'Ils / Elles'}
+];
+
+const MODULE_TITLES = {
+  1: "Módulo 1 · Básico (lições 1-16)",
+  2: "Módulo 2 · Intermediário (17-32)",
+  3: "Módulo 3 · Avançado (33-42)",
+  4: "Módulo 4 · Avançado+ (43-52)"
+};
+
+function renderSidebar(filter=''){
+  const list = document.getElementById('lessonList');
+  list.innerHTML='';
+  const f = filter.toLowerCase().trim();
+  for(let mod=1; mod<=4; mod++){
+    const lessons = LESSONS.filter(l=>l.mod===mod && (
+      !f || l.t.toLowerCase().includes(f) || l.tFr.toLowerCase().includes(f) ||
+      (l.grammar||'').toLowerCase().includes(f) ||
+      (l.vocab||[]).some(v=>v.fr.toLowerCase().includes(f)||v.pt.toLowerCase().includes(f))
+    ));
+    if(!lessons.length) continue;
+    const block = document.createElement('div');
+    block.className='module-block';
+    block.innerHTML=`<div class="module-title">${MODULE_TITLES[mod]}</div>`;
+    lessons.forEach(l=>{
+      const div=document.createElement('div');
+      div.className='lesson-item'+(l.id===currentLessonId?' active':'');
+      div.innerHTML=`<span>${l.t}</span><span class="lesson-num">L${l.id}</span>`;
+      div.onclick=()=>{currentLessonId=l.id;renderMain();renderSidebar(document.getElementById('searchBox').value);
+        if(window.innerWidth<=900){document.getElementById('sidebar').classList.remove('open');}};
+      block.appendChild(div);
+    });
+    list.appendChild(block);
+  }
+}
+
+function renderMain(){
+  const main=document.getElementById('mainContent');
+  if(currentMode==='learn') renderLearn(main);
+  else if(currentMode==='flash') renderFlash(main);
+  else if(currentMode==='quiz') renderQuiz(main);
+  else if(currentMode==='conj') renderConj(main);
+}
+
+function renderLearn(main){
+  const l = LESSONS.find(x=>x.id===currentLessonId);
+  if(!l){main.innerHTML='<div class="empty">Seleciona uma lição</div>';return}
+  let html=`<div class="lesson-header">
+    <div class="crumb">Módulo ${l.mod} · Leçon ${l.id}</div>
+    <h2>${l.t}</h2>
+    <div class="fr">${l.tFr}</div>
+  </div>`;
+  html+=`<section><h3>📚 Gramática</h3><div class="grammar">${l.grammar}</div></section>`;
+  if(l.conj && l.conj.length){
+    html+=`<section><h3>🔄 Conjugações</h3><div class="conj-grid">`;
+    l.conj.forEach(c=>{
+      html+=`<div class="conj-card"><div class="verb">${c.v}</div><div class="meaning">${c.m}</div><table>`;
+      PRONOUNS.forEach(p=>{
+        if(c.f[p.key]) html+=`<tr><td>${p.label}</td><td>${c.f[p.key]}</td></tr>`;
+      });
+      html+=`</table></div>`;
+    });
+    html+=`</div></section>`;
+  }
+  if(l.vocab && l.vocab.length){
+    html+=`<section><h3>💬 Vocabulário</h3><div class="vocab-grid">`;
+    l.vocab.forEach(v=>{
+      html+=`<div class="vocab-item"><div class="fr">${v.fr}</div><div class="pt">${v.pt}</div></div>`;
+    });
+    html+=`</div></section>`;
+  }
+  if(l.ex && l.ex.length){
+    html+=`<section><h3>📝 Exemplos</h3><div class="examples">`;
+    l.ex.forEach(e=>{
+      html+=`<div class="example"><div class="ex-fr">${e.fr}</div><div class="ex-pt">${e.pt}</div></div>`;
+    });
+    html+=`</div></section>`;
+  }
+  if(l.quiz && l.quiz.length){
+    html+=`<section><h3>❓ Mini-quiz</h3><div class="grammar"><p style="color:var(--muted)">Vai ao modo <b>Quiz</b> no topo para fazer perguntas desta lição.</p></div></section>`;
+  }
+  // navigation
+  const prev=LESSONS.find(x=>x.id===l.id-1);
+  const next=LESSONS.find(x=>x.id===l.id+1);
+  html+=`<div style="display:flex;justify-content:space-between;gap:10px;margin-top:20px">`;
+  html+= prev?`<button class="btn" onclick="currentLessonId=${prev.id};renderMain();renderSidebar(document.getElementById('searchBox').value);">⟵ ${prev.t}</button>`:`<span></span>`;
+  html+= next?`<button class="btn primary" onclick="currentLessonId=${next.id};renderMain();renderSidebar(document.getElementById('searchBox').value);">${next.t} ⟶</button>`:`<span></span>`;
+  html+=`</div>`;
+  main.innerHTML=html;
+}
+
+function renderFlash(main){
+  // collect vocab according to filter
+  let deck=[];
+  if(flashState.lessonFilter==='all'){
+    LESSONS.forEach(l=>(l.vocab||[]).forEach(v=>deck.push({...v,lid:l.id,lt:l.t})));
+  } else if(flashState.lessonFilter==='current'){
+    const l=LESSONS.find(x=>x.id===currentLessonId);
+    if(l)(l.vocab||[]).forEach(v=>deck.push({...v,lid:l.id,lt:l.t}));
+  } else {
+    const mod=+flashState.lessonFilter;
+    LESSONS.filter(l=>l.mod===mod).forEach(l=>(l.vocab||[]).forEach(v=>deck.push({...v,lid:l.id,lt:l.t})));
+  }
+  if(flashState.deck.length===0||flashState.deck.length!==deck.length){
+    flashState.deck=shuffle(deck);
+    flashState.idx=0;
+  }
+  if(deck.length===0){
+    main.innerHTML='<div class="empty">Sem vocabulário disponível</div>';return;
+  }
+  const card=flashState.deck[flashState.idx];
+  let html=`<div class="lesson-header"><h2>🎴 Flashcards</h2><div class="fr">Clica no cartão para virar</div></div>`;
+  html+=`<div class="flash-filter">
+    Lições:
+    <select id="flashFilter">
+      <option value="all"${flashState.lessonFilter==='all'?' selected':''}>Todas as lições</option>
+      <option value="current"${flashState.lessonFilter==='current'?' selected':''}>Lição atual (${currentLessonId})</option>
+      <option value="1"${flashState.lessonFilter==='1'?' selected':''}>Módulo 1</option>
+      <option value="2"${flashState.lessonFilter==='2'?' selected':''}>Módulo 2</option>
+      <option value="3"${flashState.lessonFilter==='3'?' selected':''}>Módulo 3</option>
+      <option value="4"${flashState.lessonFilter==='4'?' selected':''}>Módulo 4</option>
+    </select>
+    <span class="flash-progress">${flashState.idx+1} / ${flashState.deck.length}</span>
+  </div>`;
+  html+=`<div class="flash-wrap">
+    <div class="flashcard" id="card">
+      <div class="flash-inner">
+        <div class="flash-face flash-front">
+          <div class="word">${card.fr}</div>
+          <div class="hint">Lição ${card.lid} · ${card.lt}<br>👆 Clica para revelar</div>
+        </div>
+        <div class="flash-face flash-back">
+          <div class="word">${card.pt}</div>
+          <div class="hint">${card.fr}</div>
+        </div>
+      </div>
+    </div>
+    <div class="flash-controls">
+      <button class="btn" id="prevBtn">⟵ Anterior</button>
+      <button class="btn primary" id="flipBtn">Virar</button>
+      <button class="btn" id="nextBtn">Próximo ⟶</button>
+      <button class="btn good" id="shuffleBtn">🔀 Baralhar</button>
+    </div>
+  </div>`;
+  main.innerHTML=html;
+
+  const cardEl=document.getElementById('card');
+  cardEl.onclick=()=>cardEl.classList.toggle('flipped');
+  document.getElementById('flipBtn').onclick=(e)=>{e.stopPropagation();cardEl.classList.toggle('flipped');};
+  document.getElementById('prevBtn').onclick=()=>{flashState.idx=(flashState.idx-1+flashState.deck.length)%flashState.deck.length;renderFlash(main);};
+  document.getElementById('nextBtn').onclick=()=>{flashState.idx=(flashState.idx+1)%flashState.deck.length;renderFlash(main);};
+  document.getElementById('shuffleBtn').onclick=()=>{flashState.deck=shuffle(flashState.deck);flashState.idx=0;renderFlash(main);};
+  document.getElementById('flashFilter').onchange=(e)=>{flashState.lessonFilter=e.target.value;flashState.deck=[];renderFlash(main);};
+}
+
+function renderQuiz(main){
+  const l=LESSONS.find(x=>x.id===currentLessonId);
+  if(!l || !l.quiz || !l.quiz.length){main.innerHTML='<div class="empty">Esta lição não tem quiz</div>';return}
+  const stateKey='q'+l.id;
+  if(!quizState[stateKey]) quizState[stateKey]={answers:{},score:0};
+  const st=quizState[stateKey];
+  let html=`<div class="lesson-header">
+    <div class="crumb">Quiz · Lição ${l.id}</div>
+    <h2>❓ ${l.t}</h2>
+    <div class="fr">Escolhe a resposta correta — vê o feedback imediato</div>
+  </div>`;
+  l.quiz.forEach((q,i)=>{
+    const answered=st.answers[i]!==undefined;
+    html+=`<div class="quiz-q${answered?' answered':''}" data-i="${i}">
+      <div class="q-text">${i+1}. ${q.q}</div>
+      <div class="options">`;
+    q.o.forEach((opt,oi)=>{
+      let cls='opt';
+      if(answered){
+        if(oi===q.a) cls+=' correct';
+        else if(oi===st.answers[i]) cls+=' wrong';
+      }
+      html+=`<button class="${cls}" onclick="answerQuiz(${l.id},${i},${oi})" ${answered?'disabled':''}>${String.fromCharCode(65+oi)}. ${opt}</button>`;
+    });
+    html+=`</div>
+      <div class="explain">💡 ${q.e}</div>
+    </div>`;
+  });
+  const total=l.quiz.length;
+  const answeredCount=Object.keys(st.answers).length;
+  if(answeredCount===total){
+    html+=`<div class="quiz-summary">🎯 Pontuação: ${st.score} / ${total} (${Math.round(st.score/total*100)}%)
+    <div style="margin-top:8px"><button class="btn" onclick="resetQuiz(${l.id})" style="background:#fff;color:var(--bleu)">Refazer</button></div></div>`;
+  }
+  main.innerHTML=html;
+}
+function answerQuiz(lid,qi,oi){
+  const l=LESSONS.find(x=>x.id===lid);
+  const st=quizState['q'+lid];
+  if(st.answers[qi]!==undefined) return;
+  st.answers[qi]=oi;
+  if(oi===l.quiz[qi].a) st.score++;
+  renderQuiz(document.getElementById('mainContent'));
+}
+function resetQuiz(lid){
+  quizState['q'+lid]={answers:{},score:0};
+  renderQuiz(document.getElementById('mainContent'));
+}
+
+function renderConj(main){
+  // collect all conjugations
+  const allVerbs=[];
+  LESSONS.forEach(l=>(l.conj||[]).forEach(c=>{
+    if(!c.v.includes('(')){ // skip imparfait/futur/subj duplicates
+      allVerbs.push({...c, lid:l.id});
+    }
+  }));
+  if(!conjState.verbs.length) conjState.verbs=allVerbs.map(v=>v.v);
+  if(!conjState.currentTask) generateConjTask(allVerbs);
+  const task=conjState.currentTask;
+  if(!task){main.innerHTML='<div class="empty">Sem verbos disponíveis</div>';return}
+  let html=`<div class="lesson-header"><h2>✍️ Conjugar</h2><div class="fr">Escreve a forma correta do verbo</div></div>`;
+  html+=`<section><h3>Verbos a praticar</h3><div class="verb-picker">`;
+  allVerbs.forEach(v=>{
+    const on=conjState.verbs.includes(v.v);
+    html+=`<label class="${on?'on':''}"><input type="checkbox" ${on?'checked':''} data-verb="${v.v}">${v.v}</label>`;
+  });
+  html+=`</div></section>`;
+  html+=`<div class="conj-test">
+    <div class="conj-score">Acertos: ${conjState.score} / ${conjState.total}</div>
+    <div class="conj-prompt">
+      Conjuga <span class="verb-name">${task.verb}</span> (${task.meaning})<br>
+      → <span class="pronoun">${task.pronounLabel}</span> _____
+    </div>
+    <input type="text" class="conj-input" id="conjInput" placeholder="Escreve aqui..." autocomplete="off">
+    <div class="conj-feedback" id="conjFb"></div>
+    <div style="display:flex;gap:10px;justify-content:center">
+      <button class="btn primary" id="conjCheck">Verificar</button>
+      <button class="btn" id="conjSkip">Saltar</button>
+      <button class="btn good" id="conjReveal">Mostrar resposta</button>
+    </div>
+  </div>`;
+  main.innerHTML=html;
+  const input=document.getElementById('conjInput');
+  input.focus();
+  input.onkeydown=(e)=>{if(e.key==='Enter')checkConj(allVerbs)};
+  document.getElementById('conjCheck').onclick=()=>checkConj(allVerbs);
+  document.getElementById('conjSkip').onclick=()=>{generateConjTask(allVerbs);renderConj(main);};
+  document.getElementById('conjReveal').onclick=()=>{
+    document.getElementById('conjFb').className='conj-feedback ko';
+    document.getElementById('conjFb').innerHTML=`Resposta: <b>${task.answer}</b>`;
+  };
+  // verb-picker handlers
+  document.querySelectorAll('.verb-picker input').forEach(cb=>{
+    cb.onchange=(e)=>{
+      const v=e.target.dataset.verb;
+      if(e.target.checked) conjState.verbs.push(v);
+      else conjState.verbs=conjState.verbs.filter(x=>x!==v);
+      generateConjTask(allVerbs);renderConj(main);
+    };
+  });
+}
+function generateConjTask(allVerbs){
+  const filtered=allVerbs.filter(v=>conjState.verbs.includes(v.v));
+  if(!filtered.length){conjState.currentTask=null;return}
+  const v=filtered[Math.floor(Math.random()*filtered.length)];
+  const keys=Object.keys(v.f);
+  const k=keys[Math.floor(Math.random()*keys.length)];
+  const p=PRONOUNS.find(x=>x.key===k);
+  conjState.currentTask={verb:v.v,meaning:v.m,pronoun:k,pronounLabel:p?p.label:k,answer:v.f[k]};
+}
+function checkConj(allVerbs){
+  const input=document.getElementById('conjInput');
+  const fb=document.getElementById('conjFb');
+  const ans=normalize(conjState.currentTask.answer);
+  const got=normalize(input.value);
+  conjState.total++;
+  if(got===ans){
+    conjState.score++;
+    fb.className='conj-feedback ok';
+    fb.innerHTML=`✅ Correto! <b>${conjState.currentTask.answer}</b>`;
+    setTimeout(()=>{generateConjTask(allVerbs);renderConj(document.getElementById('mainContent'));},900);
+  } else {
+    fb.className='conj-feedback ko';
+    fb.innerHTML=`❌ Errado. Resposta: <b>${conjState.currentTask.answer}</b> (escreveste "${input.value||'—'}")`;
+    setTimeout(()=>{generateConjTask(allVerbs);renderConj(document.getElementById('mainContent'));},1800);
+  }
+}
+function normalize(s){return (s||'').toLowerCase().trim().replace(/\s+/g,' ');}
+function shuffle(a){const r=[...a];for(let i=r.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[r[i],r[j]]=[r[j],r[i]];}return r;}
+
+// Mode buttons
+document.querySelectorAll('.modes button').forEach(b=>{
+  b.onclick=()=>{
+    document.querySelectorAll('.modes button').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    currentMode=b.dataset.mode;
+    if(currentMode==='flash'){flashState.deck=[];}
+    if(currentMode==='conj'){conjState.currentTask=null;}
+    renderMain();
+  };
+});
+document.getElementById('searchBox').addEventListener('input',(e)=>renderSidebar(e.target.value));
+document.getElementById('menuBtn').onclick=()=>document.getElementById('sidebar').classList.toggle('open');
+
+// initial render
+renderSidebar();
+renderMain();
+</script>
+</body>
+</html>
