@@ -27,34 +27,51 @@ const storage = {
 };
 
 // ==================== TTS (TEXT-TO-SPEECH) ====================
-let _voiceFR = null;
+// Garante que as vozes estejam carregadas antes de falar (Chrome/Safari async)
 function pickFrenchVoice() {
-  if (_voiceFR) return _voiceFR;
+  if (typeof speechSynthesis === 'undefined') return null;
   const voices = speechSynthesis.getVoices();
-  // Priorizar Amélie/Thomas (macOS) ou qualquer fr-FR
-  _voiceFR = voices.find(v => /amelie|thomas|aurelie/i.test(v.name) && v.lang.startsWith('fr'))
-          || voices.find(v => v.lang === 'fr-FR')
-          || voices.find(v => v.lang.startsWith('fr'))
-          || null;
-  return _voiceFR;
+  if (!voices.length) return null;
+  // Prioridade: vozes nativas macOS/iOS conhecidas → fr-FR local → qualquer fr-FR → fr-CA → qualquer fr-*
+  return voices.find(v => /thomas|amelie|amélie|aurélie|aurelie|virginie|nicolas|jean-pierre/i.test(v.name) && /^fr/i.test(v.lang))
+      || voices.find(v => v.lang === 'fr-FR' && v.localService)
+      || voices.find(v => v.lang === 'fr-FR')
+      || voices.find(v => v.lang === 'fr-CA')
+      || voices.find(v => /^fr/i.test(v.lang))
+      || null;
 }
-if (typeof speechSynthesis !== 'undefined') {
-  speechSynthesis.onvoiceschanged = () => { _voiceFR = null; pickFrenchVoice(); };
-  pickFrenchVoice();
-}
-function speak(text, opts={}) {
+function _doSpeak(text, opts) {
   if (!text || typeof speechSynthesis === 'undefined') return;
   speechSynthesis.cancel();
-  // remover marcadores markdown e parênteses meta
-  const clean = String(text).replace(/\*+/g, '').replace(/\(.*?\)/g, '').replace(/\/.*$/, '').trim();
+  const clean = String(text).replace(/\*+/g, '').replace(/\(.*?\)/g, '').replace(/\/[^\/]*$/, '').trim();
   if (!clean) return;
   const u = new SpeechSynthesisUtterance(clean);
   u.lang = 'fr-FR';
-  u.rate = opts.rate || 0.85;
-  u.pitch = opts.pitch || 1;
+  u.rate = (opts && opts.rate) || 0.9;
+  u.pitch = (opts && opts.pitch) || 1;
   const v = pickFrenchVoice();
   if (v) u.voice = v;
-  speechSynthesis.speak(u);
+  // Pequeno delay garante que cancel() não corte a nova utterance no Chrome
+  setTimeout(() => speechSynthesis.speak(u), 60);
+}
+function speak(text, opts) {
+  if (typeof speechSynthesis === 'undefined') return;
+  // Se as vozes ainda não estão carregadas, aguarda
+  if (speechSynthesis.getVoices().length === 0) {
+    let tries = 0;
+    const wait = () => {
+      if (speechSynthesis.getVoices().length > 0 || tries >= 25) _doSpeak(text, opts);
+      else { tries++; setTimeout(wait, 80); }
+    };
+    wait();
+  } else {
+    _doSpeak(text, opts);
+  }
+}
+// Força o carregamento das vozes (alguns browsers só carregam após primeira interação ou getVoices)
+if (typeof speechSynthesis !== 'undefined') {
+  speechSynthesis.getVoices();
+  speechSynthesis.onvoiceschanged = () => { /* refresh on event */ };
 }
 function SpeakBtn({ text, size }) {
   const cls = "fr-speak-btn" + (size === 'big' ? ' fr-speak-big' : '');
@@ -122,228 +139,228 @@ const VOCAB = {
     { fr: "dix-huit", pt: "18", aula: 0, emoji: "1️⃣8️⃣" },
     { fr: "dix-neuf", pt: "19", aula: 0, emoji: "1️⃣9️⃣" },
     { fr: "vingt", pt: "20", aula: 0, emoji: "2️⃣0️⃣" },
-    { fr: "trente", pt: "30", aula: 1, emoji: "3️⃣0️⃣" },
-    { fr: "quarante", pt: "40", aula: 1, emoji: "4️⃣0️⃣" },
-    { fr: "cinquante", pt: "50", aula: 1, emoji: "5️⃣0️⃣" },
-    { fr: "soixante", pt: "60", aula: 1, emoji: "6️⃣0️⃣" },
-    { fr: "soixante-dix", pt: "70", aula: 1, emoji: "7️⃣0️⃣" },
-    { fr: "quatre-vingts", pt: "80", aula: 1, emoji: "8️⃣0️⃣" },
-    { fr: "quatre-vingt-dix", pt: "90", aula: 1, emoji: "9️⃣0️⃣" },
-    { fr: "cent", pt: "100", aula: 1, emoji: "💯" },
-    { fr: "mille", pt: "1000", aula: 1, emoji: "txt:1000" }
+    { fr: "trente", pt: "30", aula: 0, emoji: "3️⃣0️⃣" },
+    { fr: "quarante", pt: "40", aula: 0, emoji: "4️⃣0️⃣" },
+    { fr: "cinquante", pt: "50", aula: 0, emoji: "5️⃣0️⃣" },
+    { fr: "soixante", pt: "60", aula: 0, emoji: "6️⃣0️⃣" },
+    { fr: "soixante-dix", pt: "70", aula: 0, emoji: "7️⃣0️⃣" },
+    { fr: "quatre-vingts", pt: "80", aula: 0, emoji: "8️⃣0️⃣" },
+    { fr: "quatre-vingt-dix", pt: "90", aula: 0, emoji: "9️⃣0️⃣" },
+    { fr: "cent", pt: "100", aula: 0, emoji: "💯" },
+    { fr: "mille", pt: "1000", aula: 0, emoji: "txt:1000" }
   ],
   familia: [
-    { fr: "la mère", pt: "a mãe", aula: 3, emoji: "👩" },
-    { fr: "le père", pt: "o pai", aula: 3, emoji: "👨" },
-    { fr: "les parents", pt: "os pais", aula: 3, emoji: "👨‍👩‍👧" },
-    { fr: "le fils", pt: "o filho", aula: 3, emoji: "👦" },
-    { fr: "la fille", pt: "a filha / a rapariga", aula: 3, emoji: "👧" },
-    { fr: "le frère", pt: "o irmão", aula: 3, emoji: "👬" },
-    { fr: "la sœur", pt: "a irmã", aula: 3, emoji: "👭" },
-    { fr: "le grand-père", pt: "o avô", aula: 3, emoji: "👴" },
-    { fr: "la grand-mère", pt: "a avó", aula: 3, emoji: "👵" },
-    { fr: "l'oncle", pt: "o tio", aula: 3, emoji: "👨‍🦳" },
-    { fr: "la tante", pt: "a tia", aula: 3, emoji: "👩‍🦳" },
-    { fr: "le cousin", pt: "o primo", aula: 3, emoji: "🧑" },
-    { fr: "la cousine", pt: "a prima", aula: 3, emoji: "🧑" },
-    { fr: "le mari", pt: "o marido", aula: 3, emoji: "🤵" },
-    { fr: "la femme", pt: "a esposa / a mulher", aula: 3, emoji: "👰" },
-    { fr: "l'enfant", pt: "a criança", aula: 3, emoji: "🧒" },
-    { fr: "le bébé", pt: "o bebé", aula: 3, emoji: "👶" },
-    { fr: "l'ami", pt: "o amigo", aula: 3, emoji: "🧑‍🤝‍🧑" },
-    { fr: "l'amie", pt: "a amiga", aula: 3, emoji: "🧑‍🤝‍🧑" },
-    { fr: "le neveu", pt: "o sobrinho", aula: 3, emoji: "txt:Sobrinho" },
-    { fr: "la nièce", pt: "a sobrinha", aula: 3, emoji: "txt:Sobrinha" }
+    { fr: "la mère", pt: "a mãe", aula: 1, emoji: "👩" },
+    { fr: "le père", pt: "o pai", aula: 1, emoji: "👨" },
+    { fr: "les parents", pt: "os pais", aula: 1, emoji: "👨‍👩‍👧" },
+    { fr: "le fils", pt: "o filho", aula: 1, emoji: "👦" },
+    { fr: "la fille", pt: "a filha / a rapariga", aula: 1, emoji: "👧" },
+    { fr: "le frère", pt: "o irmão", aula: 1, emoji: "👬" },
+    { fr: "la sœur", pt: "a irmã", aula: 1, emoji: "👭" },
+    { fr: "le grand-père", pt: "o avô", aula: 1, emoji: "👴" },
+    { fr: "la grand-mère", pt: "a avó", aula: 1, emoji: "👵" },
+    { fr: "l'oncle", pt: "o tio", aula: 1, emoji: "👨‍🦳" },
+    { fr: "la tante", pt: "a tia", aula: 1, emoji: "👩‍🦳" },
+    { fr: "le cousin", pt: "o primo", aula: 1, emoji: "🧑" },
+    { fr: "la cousine", pt: "a prima", aula: 1, emoji: "🧑" },
+    { fr: "le mari", pt: "o marido", aula: 1, emoji: "🤵" },
+    { fr: "la femme", pt: "a esposa / a mulher", aula: 1, emoji: "👰" },
+    { fr: "l'enfant", pt: "a criança", aula: 1, emoji: "🧒" },
+    { fr: "le bébé", pt: "o bebé", aula: 1, emoji: "👶" },
+    { fr: "l'ami", pt: "o amigo", aula: 1, emoji: "🧑‍🤝‍🧑" },
+    { fr: "l'amie", pt: "a amiga", aula: 1, emoji: "🧑‍🤝‍🧑" },
+    { fr: "le neveu", pt: "o sobrinho", aula: 1, emoji: "txt:Sobrinho" },
+    { fr: "la nièce", pt: "a sobrinha", aula: 1, emoji: "txt:Sobrinha" }
   ],
   corpo: [
-    { fr: "la tête", pt: "a cabeça", aula: 4, emoji: "🗣️" },
-    { fr: "les cheveux", pt: "os cabelos", aula: 4, emoji: "💇" },
-    { fr: "l'œil", pt: "o olho", aula: 4, emoji: "👁️" },
-    { fr: "les yeux", pt: "os olhos", aula: 4, emoji: "👀" },
-    { fr: "le nez", pt: "o nariz", aula: 4, emoji: "👃" },
-    { fr: "la bouche", pt: "a boca", aula: 4, emoji: "👄" },
-    { fr: "les dents", pt: "os dentes", aula: 4, emoji: "🦷" },
-    { fr: "l'oreille", pt: "a orelha", aula: 4, emoji: "👂" },
-    { fr: "le cou", pt: "o pescoço", aula: 4, emoji: "txt:Pescoço" },
-    { fr: "l'épaule", pt: "o ombro", aula: 4, emoji: "txt:Ombro" },
-    { fr: "le bras", pt: "o braço", aula: 4, emoji: "💪" },
-    { fr: "la main", pt: "a mão", aula: 4, emoji: "✋" },
-    { fr: "le doigt", pt: "o dedo", aula: 4, emoji: "👆" },
-    { fr: "le ventre", pt: "a barriga", aula: 4, emoji: "🫃" },
-    { fr: "le dos", pt: "as costas", aula: 4, emoji: "txt:Costas" },
-    { fr: "la jambe", pt: "a perna", aula: 4, emoji: "🦵" },
-    { fr: "le pied", pt: "o pé", aula: 4, emoji: "🦶" },
-    { fr: "le cœur", pt: "o coração", aula: 4, emoji: "❤️" },
-    { fr: "le visage", pt: "o rosto", aula: 4, emoji: "txt:Rosto" }
+    { fr: "la tête", pt: "a cabeça", aula: 2, emoji: "🗣️" },
+    { fr: "les cheveux", pt: "os cabelos", aula: 2, emoji: "💇" },
+    { fr: "l'œil", pt: "o olho", aula: 2, emoji: "👁️" },
+    { fr: "les yeux", pt: "os olhos", aula: 2, emoji: "👀" },
+    { fr: "le nez", pt: "o nariz", aula: 2, emoji: "👃" },
+    { fr: "la bouche", pt: "a boca", aula: 2, emoji: "👄" },
+    { fr: "les dents", pt: "os dentes", aula: 2, emoji: "🦷" },
+    { fr: "l'oreille", pt: "a orelha", aula: 2, emoji: "👂" },
+    { fr: "le cou", pt: "o pescoço", aula: 2, emoji: "txt:Pescoço" },
+    { fr: "l'épaule", pt: "o ombro", aula: 2, emoji: "txt:Ombro" },
+    { fr: "le bras", pt: "o braço", aula: 2, emoji: "💪" },
+    { fr: "la main", pt: "a mão", aula: 2, emoji: "✋" },
+    { fr: "le doigt", pt: "o dedo", aula: 2, emoji: "👆" },
+    { fr: "le ventre", pt: "a barriga", aula: 2, emoji: "🫃" },
+    { fr: "le dos", pt: "as costas", aula: 2, emoji: "txt:Costas" },
+    { fr: "la jambe", pt: "a perna", aula: 2, emoji: "🦵" },
+    { fr: "le pied", pt: "o pé", aula: 2, emoji: "🦶" },
+    { fr: "le cœur", pt: "o coração", aula: 2, emoji: "❤️" },
+    { fr: "le visage", pt: "o rosto", aula: 2, emoji: "txt:Rosto" }
   ],
   comida: [
-    { fr: "le pain", pt: "o pão", aula: 2, emoji: "🥖" },
-    { fr: "le fromage", pt: "o queijo", aula: 2, emoji: "🧀" },
-    { fr: "le beurre", pt: "a manteiga", aula: 2, emoji: "🧈" },
-    { fr: "l'œuf", pt: "o ovo", aula: 2, emoji: "🥚" },
-    { fr: "le lait", pt: "o leite", aula: 2, emoji: "🥛" },
-    { fr: "le café", pt: "o café", aula: 2, emoji: "☕" },
-    { fr: "le thé", pt: "o chá", aula: 2, emoji: "🍵" },
-    { fr: "l'eau", pt: "a água", aula: 2, emoji: "💧" },
-    { fr: "le vin", pt: "o vinho", aula: 2, emoji: "🍷" },
-    { fr: "la bière", pt: "a cerveja", aula: 2, emoji: "🍺" },
-    { fr: "la viande", pt: "a carne", aula: 2, emoji: "🥩" },
-    { fr: "le poisson", pt: "o peixe", aula: 2, emoji: "🐟" },
-    { fr: "le poulet", pt: "o frango", aula: 2, emoji: "🍗" },
-    { fr: "les légumes", pt: "os legumes", aula: 2, emoji: "🥕" },
-    { fr: "les fruits", pt: "as frutas", aula: 2, emoji: "🍎" },
-    { fr: "la pomme", pt: "a maçã", aula: 2, emoji: "🍎" },
-    { fr: "la banane", pt: "a banana", aula: 2, emoji: "🍌" },
-    { fr: "l'orange", pt: "a laranja", aula: 2, emoji: "🍊" },
-    { fr: "la pizza", pt: "a pizza", aula: 2, emoji: "🍕" },
-    { fr: "la salade", pt: "a salada", aula: 2, emoji: "🥗" },
-    { fr: "le riz", pt: "o arroz", aula: 2, emoji: "🍚" },
-    { fr: "les pâtes", pt: "a massa", aula: 2, emoji: "🍝" },
-    { fr: "le sucre", pt: "o açúcar", aula: 2, emoji: "txt:Açúcar" },
-    { fr: "le sel", pt: "o sal", aula: 2, emoji: "🧂" },
-    { fr: "le croissant", pt: "o croissant", aula: 2, emoji: "🥐" },
-    { fr: "le chocolat", pt: "o chocolate", aula: 2, emoji: "🍫" },
-    { fr: "la soupe", pt: "a sopa", aula: 2, emoji: "🍲" },
-    { fr: "le gâteau", pt: "o bolo", aula: 2, emoji: "🎂" }
+    { fr: "le pain", pt: "o pão", aula: 1, emoji: "🥖" },
+    { fr: "le fromage", pt: "o queijo", aula: 1, emoji: "🧀" },
+    { fr: "le beurre", pt: "a manteiga", aula: 1, emoji: "🧈" },
+    { fr: "l'œuf", pt: "o ovo", aula: 1, emoji: "🥚" },
+    { fr: "le lait", pt: "o leite", aula: 1, emoji: "🥛" },
+    { fr: "le café", pt: "o café", aula: 1, emoji: "☕" },
+    { fr: "le thé", pt: "o chá", aula: 1, emoji: "🍵" },
+    { fr: "l'eau", pt: "a água", aula: 1, emoji: "💧" },
+    { fr: "le vin", pt: "o vinho", aula: 1, emoji: "🍷" },
+    { fr: "la bière", pt: "a cerveja", aula: 1, emoji: "🍺" },
+    { fr: "la viande", pt: "a carne", aula: 1, emoji: "🥩" },
+    { fr: "le poisson", pt: "o peixe", aula: 1, emoji: "🐟" },
+    { fr: "le poulet", pt: "o frango", aula: 1, emoji: "🍗" },
+    { fr: "les légumes", pt: "os legumes", aula: 1, emoji: "🥕" },
+    { fr: "les fruits", pt: "as frutas", aula: 1, emoji: "🍎" },
+    { fr: "la pomme", pt: "a maçã", aula: 1, emoji: "🍎" },
+    { fr: "la banane", pt: "a banana", aula: 1, emoji: "🍌" },
+    { fr: "l'orange", pt: "a laranja", aula: 1, emoji: "🍊" },
+    { fr: "la pizza", pt: "a pizza", aula: 1, emoji: "🍕" },
+    { fr: "la salade", pt: "a salada", aula: 1, emoji: "🥗" },
+    { fr: "le riz", pt: "o arroz", aula: 1, emoji: "🍚" },
+    { fr: "les pâtes", pt: "a massa", aula: 1, emoji: "🍝" },
+    { fr: "le sucre", pt: "o açúcar", aula: 1, emoji: "txt:Açúcar" },
+    { fr: "le sel", pt: "o sal", aula: 1, emoji: "🧂" },
+    { fr: "le croissant", pt: "o croissant", aula: 1, emoji: "🥐" },
+    { fr: "le chocolat", pt: "o chocolate", aula: 1, emoji: "🍫" },
+    { fr: "la soupe", pt: "a sopa", aula: 1, emoji: "🍲" },
+    { fr: "le gâteau", pt: "o bolo", aula: 1, emoji: "🎂" }
   ],
   casa: [
-    { fr: "la maison", pt: "a casa", aula: 2, emoji: "🏠" },
-    { fr: "l'appartement", pt: "o apartamento", aula: 2, emoji: "🏢" },
-    { fr: "la chambre", pt: "o quarto", aula: 2, emoji: "🛏️" },
-    { fr: "la cuisine", pt: "a cozinha", aula: 2, emoji: "🍳" },
-    { fr: "la salle de bain", pt: "a casa de banho", aula: 2, emoji: "🛁" },
-    { fr: "le salon", pt: "a sala", aula: 2, emoji: "🛋️" },
-    { fr: "la porte", pt: "a porta", aula: 2, emoji: "🚪" },
-    { fr: "la fenêtre", pt: "a janela", aula: 2, emoji: "🪟" },
-    { fr: "le lit", pt: "a cama", aula: 2, emoji: "🛏️" },
-    { fr: "la table", pt: "a mesa", aula: 2, emoji: "🪑" },
-    { fr: "la chaise", pt: "a cadeira", aula: 2, emoji: "🪑" },
-    { fr: "le canapé", pt: "o sofá", aula: 2, emoji: "🛋️" },
-    { fr: "le miroir", pt: "o espelho", aula: 2, emoji: "🪞" },
-    { fr: "le jardin", pt: "o jardim", aula: 2, emoji: "🌳" },
-    { fr: "l'escalier", pt: "a escada", aula: 2, emoji: "txt:Escada" },
-    { fr: "le frigo", pt: "o frigorífico", aula: 2, emoji: "🧊" }
+    { fr: "la maison", pt: "a casa", aula: 1, emoji: "🏠" },
+    { fr: "l'appartement", pt: "o apartamento", aula: 1, emoji: "🏢" },
+    { fr: "la chambre", pt: "o quarto", aula: 1, emoji: "🛏️" },
+    { fr: "la cuisine", pt: "a cozinha", aula: 1, emoji: "🍳" },
+    { fr: "la salle de bain", pt: "a casa de banho", aula: 1, emoji: "🛁" },
+    { fr: "le salon", pt: "a sala", aula: 1, emoji: "🛋️" },
+    { fr: "la porte", pt: "a porta", aula: 1, emoji: "🚪" },
+    { fr: "la fenêtre", pt: "a janela", aula: 1, emoji: "🪟" },
+    { fr: "le lit", pt: "a cama", aula: 1, emoji: "🛏️" },
+    { fr: "la table", pt: "a mesa", aula: 1, emoji: "🪑" },
+    { fr: "la chaise", pt: "a cadeira", aula: 1, emoji: "🪑" },
+    { fr: "le canapé", pt: "o sofá", aula: 1, emoji: "🛋️" },
+    { fr: "le miroir", pt: "o espelho", aula: 1, emoji: "🪞" },
+    { fr: "le jardin", pt: "o jardim", aula: 1, emoji: "🌳" },
+    { fr: "l'escalier", pt: "a escada", aula: 1, emoji: "txt:Escada" },
+    { fr: "le frigo", pt: "o frigorífico", aula: 1, emoji: "🧊" }
   ],
   cidade: [
-    { fr: "la ville", pt: "a cidade", aula: 1, emoji: "🏙️" },
-    { fr: "la rue", pt: "a rua", aula: 1, emoji: "🛣️" },
-    { fr: "l'avenue", pt: "a avenida", aula: 1, emoji: "🛣️" },
-    { fr: "la place", pt: "a praça", aula: 1, emoji: "⛲" },
-    { fr: "le café", pt: "o café (lugar)", aula: 1, emoji: "☕" },
-    { fr: "le restaurant", pt: "o restaurante", aula: 1, emoji: "🍽️" },
-    { fr: "la boulangerie", pt: "a padaria", aula: 1, emoji: "🥖" },
-    { fr: "la pharmacie", pt: "a farmácia", aula: 1, emoji: "💊" },
-    { fr: "la banque", pt: "o banco", aula: 1, emoji: "🏦" },
-    { fr: "l'hôtel", pt: "o hotel", aula: 1, emoji: "🏨" },
-    { fr: "le supermarché", pt: "o supermercado", aula: 1, emoji: "🛒" },
-    { fr: "le marché", pt: "o mercado", aula: 1, emoji: "🍅" },
-    { fr: "l'école", pt: "a escola", aula: 1, emoji: "🏫" },
-    { fr: "l'hôpital", pt: "o hospital", aula: 1, emoji: "🏥" },
-    { fr: "le musée", pt: "o museu", aula: 1, emoji: "🖼️" },
-    { fr: "l'église", pt: "a igreja", aula: 1, emoji: "⛪" },
-    { fr: "la gare", pt: "a estação", aula: 1, emoji: "🚉" },
-    { fr: "le parc", pt: "o parque", aula: 1, emoji: "🌳" },
-    { fr: "la bibliothèque", pt: "a biblioteca", aula: 1, emoji: "📚" }
+    { fr: "la ville", pt: "a cidade", aula: 0, emoji: "🏙️" },
+    { fr: "la rue", pt: "a rua", aula: 0, emoji: "🛣️" },
+    { fr: "l'avenue", pt: "a avenida", aula: 0, emoji: "🛣️" },
+    { fr: "la place", pt: "a praça", aula: 0, emoji: "⛲" },
+    { fr: "le café", pt: "o café (lugar)", aula: 0, emoji: "☕" },
+    { fr: "le restaurant", pt: "o restaurante", aula: 0, emoji: "🍽️" },
+    { fr: "la boulangerie", pt: "a padaria", aula: 0, emoji: "🥖" },
+    { fr: "la pharmacie", pt: "a farmácia", aula: 0, emoji: "💊" },
+    { fr: "la banque", pt: "o banco", aula: 0, emoji: "🏦" },
+    { fr: "l'hôtel", pt: "o hotel", aula: 0, emoji: "🏨" },
+    { fr: "le supermarché", pt: "o supermercado", aula: 0, emoji: "🛒" },
+    { fr: "le marché", pt: "o mercado", aula: 0, emoji: "🍅" },
+    { fr: "l'école", pt: "a escola", aula: 0, emoji: "🏫" },
+    { fr: "l'hôpital", pt: "o hospital", aula: 0, emoji: "🏥" },
+    { fr: "le musée", pt: "o museu", aula: 0, emoji: "🖼️" },
+    { fr: "l'église", pt: "a igreja", aula: 0, emoji: "⛪" },
+    { fr: "la gare", pt: "a estação", aula: 0, emoji: "🚉" },
+    { fr: "le parc", pt: "o parque", aula: 0, emoji: "🌳" },
+    { fr: "la bibliothèque", pt: "a biblioteca", aula: 0, emoji: "📚" }
   ],
   tempo: [
-    { fr: "le soleil", pt: "o sol", aula: 5, emoji: "☀️" },
-    { fr: "la pluie", pt: "a chuva", aula: 5, emoji: "🌧️" },
-    { fr: "la neige", pt: "a neve", aula: 5, emoji: "❄️" },
-    { fr: "le vent", pt: "o vento", aula: 5, emoji: "💨" },
-    { fr: "le nuage", pt: "a nuvem", aula: 5, emoji: "☁️" },
-    { fr: "il fait beau", pt: "está bom tempo", aula: 5, emoji: "🌤️" },
-    { fr: "il fait mauvais", pt: "está mau tempo", aula: 5, emoji: "⛈️" },
-    { fr: "il fait chaud", pt: "está calor", aula: 5, emoji: "🥵" },
-    { fr: "il fait froid", pt: "está frio", aula: 5, emoji: "🥶" },
-    { fr: "il pleut", pt: "está a chover", aula: 5, emoji: "🌧️" },
-    { fr: "il neige", pt: "está a nevar", aula: 5, emoji: "🌨️" },
-    { fr: "le matin", pt: "a manhã", aula: 5, emoji: "🌅" },
-    { fr: "l'après-midi", pt: "a tarde", aula: 5, emoji: "🌇" },
-    { fr: "le soir", pt: "a noite (anoitecer)", aula: 5, emoji: "🌆" },
-    { fr: "la nuit", pt: "a noite", aula: 5, emoji: "🌃" },
-    { fr: "aujourd'hui", pt: "hoje", aula: 5, emoji: "📅" },
-    { fr: "hier", pt: "ontem", aula: 5, emoji: "txt:Ontem" },
-    { fr: "demain", pt: "amanhã", aula: 5, emoji: "txt:Amanhã" },
-    { fr: "la semaine", pt: "a semana", aula: 5, emoji: "txt:Semana" },
-    { fr: "le mois", pt: "o mês", aula: 5, emoji: "txt:Mês" },
-    { fr: "l'année", pt: "o ano", aula: 5, emoji: "txt:Ano" }
+    { fr: "le soleil", pt: "o sol", aula: 2, emoji: "☀️" },
+    { fr: "la pluie", pt: "a chuva", aula: 2, emoji: "🌧️" },
+    { fr: "la neige", pt: "a neve", aula: 2, emoji: "❄️" },
+    { fr: "le vent", pt: "o vento", aula: 2, emoji: "💨" },
+    { fr: "le nuage", pt: "a nuvem", aula: 2, emoji: "☁️" },
+    { fr: "il fait beau", pt: "está bom tempo", aula: 2, emoji: "🌤️" },
+    { fr: "il fait mauvais", pt: "está mau tempo", aula: 2, emoji: "⛈️" },
+    { fr: "il fait chaud", pt: "está calor", aula: 2, emoji: "🥵" },
+    { fr: "il fait froid", pt: "está frio", aula: 2, emoji: "🥶" },
+    { fr: "il pleut", pt: "está a chover", aula: 2, emoji: "🌧️" },
+    { fr: "il neige", pt: "está a nevar", aula: 2, emoji: "🌨️" },
+    { fr: "le matin", pt: "a manhã", aula: 2, emoji: "🌅" },
+    { fr: "l'après-midi", pt: "a tarde", aula: 2, emoji: "🌇" },
+    { fr: "le soir", pt: "a noite (anoitecer)", aula: 2, emoji: "🌆" },
+    { fr: "la nuit", pt: "a noite", aula: 2, emoji: "🌃" },
+    { fr: "aujourd'hui", pt: "hoje", aula: 2, emoji: "📅" },
+    { fr: "hier", pt: "ontem", aula: 2, emoji: "txt:Ontem" },
+    { fr: "demain", pt: "amanhã", aula: 2, emoji: "txt:Amanhã" },
+    { fr: "la semaine", pt: "a semana", aula: 2, emoji: "txt:Semana" },
+    { fr: "le mois", pt: "o mês", aula: 2, emoji: "txt:Mês" },
+    { fr: "l'année", pt: "o ano", aula: 2, emoji: "txt:Ano" }
   ],
   cores: [
-    { fr: "rouge", pt: "vermelho", aula: 4, emoji: "🔴" },
-    { fr: "bleu", pt: "azul", aula: 4, emoji: "🔵" },
-    { fr: "vert", pt: "verde", aula: 4, emoji: "🟢" },
-    { fr: "jaune", pt: "amarelo", aula: 4, emoji: "🟡" },
-    { fr: "noir", pt: "preto", aula: 4, emoji: "⚫" },
-    { fr: "blanc", pt: "branco", aula: 4, emoji: "⚪" },
-    { fr: "gris", pt: "cinza", aula: 4, emoji: "txt:Cinza" },
-    { fr: "marron", pt: "castanho", aula: 4, emoji: "🟤" },
-    { fr: "rose", pt: "cor-de-rosa", aula: 4, emoji: "🌸" },
-    { fr: "violet", pt: "violeta", aula: 4, emoji: "🟣" },
-    { fr: "orange", pt: "laranja", aula: 4, emoji: "🟠" }
+    { fr: "rouge", pt: "vermelho", aula: 2, emoji: "🔴" },
+    { fr: "bleu", pt: "azul", aula: 2, emoji: "🔵" },
+    { fr: "vert", pt: "verde", aula: 2, emoji: "🟢" },
+    { fr: "jaune", pt: "amarelo", aula: 2, emoji: "🟡" },
+    { fr: "noir", pt: "preto", aula: 2, emoji: "⚫" },
+    { fr: "blanc", pt: "branco", aula: 2, emoji: "⚪" },
+    { fr: "gris", pt: "cinza", aula: 2, emoji: "txt:Cinza" },
+    { fr: "marron", pt: "castanho", aula: 2, emoji: "🟤" },
+    { fr: "rose", pt: "cor-de-rosa", aula: 2, emoji: "🌸" },
+    { fr: "violet", pt: "violeta", aula: 2, emoji: "🟣" },
+    { fr: "orange", pt: "laranja", aula: 2, emoji: "🟠" }
   ],
   profissoes: [
-    { fr: "le professeur", pt: "o professor", aula: 3, emoji: "👨‍🏫" },
-    { fr: "l'étudiant", pt: "o estudante", aula: 3, emoji: "🎓" },
-    { fr: "le médecin", pt: "o médico", aula: 3, emoji: "👨‍⚕️" },
-    { fr: "l'avocat", pt: "o advogado", aula: 3, emoji: "⚖️" },
-    { fr: "l'ingénieur", pt: "o engenheiro", aula: 3, emoji: "👷" },
-    { fr: "l'architecte", pt: "o arquiteto", aula: 3, emoji: "📐" },
-    { fr: "le journaliste", pt: "o jornalista", aula: 3, emoji: "📰" },
-    { fr: "le boulanger", pt: "o padeiro", aula: 3, emoji: "🥖" },
-    { fr: "le chef", pt: "o chef / cozinheiro", aula: 3, emoji: "👨‍🍳" },
-    { fr: "le serveur", pt: "o empregado de mesa", aula: 3, emoji: "🤵" },
-    { fr: "le chauffeur", pt: "o motorista", aula: 3, emoji: "🚖" },
-    { fr: "le musicien", pt: "o músico", aula: 3, emoji: "🎵" },
-    { fr: "l'artiste", pt: "o artista", aula: 3, emoji: "🎨" },
-    { fr: "l'infirmier", pt: "o enfermeiro", aula: 3, emoji: "💉" }
+    { fr: "le professeur", pt: "o professor", aula: 1, emoji: "👨‍🏫" },
+    { fr: "l'étudiant", pt: "o estudante", aula: 1, emoji: "🎓" },
+    { fr: "le médecin", pt: "o médico", aula: 1, emoji: "👨‍⚕️" },
+    { fr: "l'avocat", pt: "o advogado", aula: 1, emoji: "⚖️" },
+    { fr: "l'ingénieur", pt: "o engenheiro", aula: 1, emoji: "👷" },
+    { fr: "l'architecte", pt: "o arquiteto", aula: 1, emoji: "📐" },
+    { fr: "le journaliste", pt: "o jornalista", aula: 1, emoji: "📰" },
+    { fr: "le boulanger", pt: "o padeiro", aula: 1, emoji: "🥖" },
+    { fr: "le chef", pt: "o chef / cozinheiro", aula: 1, emoji: "👨‍🍳" },
+    { fr: "le serveur", pt: "o empregado de mesa", aula: 1, emoji: "🤵" },
+    { fr: "le chauffeur", pt: "o motorista", aula: 1, emoji: "🚖" },
+    { fr: "le musicien", pt: "o músico", aula: 1, emoji: "🎵" },
+    { fr: "l'artiste", pt: "o artista", aula: 1, emoji: "🎨" },
+    { fr: "l'infirmier", pt: "o enfermeiro", aula: 1, emoji: "💉" }
   ],
   transporte: [
-    { fr: "la voiture", pt: "o carro", aula: 5, emoji: "🚗" },
-    { fr: "le vélo", pt: "a bicicleta", aula: 5, emoji: "🚲" },
-    { fr: "le bus", pt: "o autocarro", aula: 5, emoji: "🚌" },
-    { fr: "le métro", pt: "o metro", aula: 5, emoji: "🚇" },
-    { fr: "le train", pt: "o comboio", aula: 5, emoji: "🚆" },
-    { fr: "l'avion", pt: "o avião", aula: 5, emoji: "✈️" },
-    { fr: "le bateau", pt: "o barco", aula: 5, emoji: "⛵" },
-    { fr: "le taxi", pt: "o táxi", aula: 5, emoji: "🚕" },
-    { fr: "la moto", pt: "a mota", aula: 5, emoji: "🏍️" }
+    { fr: "la voiture", pt: "o carro", aula: 2, emoji: "🚗" },
+    { fr: "le vélo", pt: "a bicicleta", aula: 2, emoji: "🚲" },
+    { fr: "le bus", pt: "o autocarro", aula: 2, emoji: "🚌" },
+    { fr: "le métro", pt: "o metro", aula: 2, emoji: "🚇" },
+    { fr: "le train", pt: "o comboio", aula: 2, emoji: "🚆" },
+    { fr: "l'avion", pt: "o avião", aula: 2, emoji: "✈️" },
+    { fr: "le bateau", pt: "o barco", aula: 2, emoji: "⛵" },
+    { fr: "le taxi", pt: "o táxi", aula: 2, emoji: "🚕" },
+    { fr: "la moto", pt: "a mota", aula: 2, emoji: "🏍️" }
   ],
   animais: [
-    { fr: "le chien", pt: "o cão", aula: 4, emoji: "🐶" },
-    { fr: "le chat", pt: "o gato", aula: 4, emoji: "🐱" },
-    { fr: "le cheval", pt: "o cavalo", aula: 4, emoji: "🐴" },
-    { fr: "la vache", pt: "a vaca", aula: 4, emoji: "🐮" },
-    { fr: "le mouton", pt: "a ovelha", aula: 4, emoji: "🐑" },
-    { fr: "le cochon", pt: "o porco", aula: 4, emoji: "🐷" },
-    { fr: "la poule", pt: "a galinha", aula: 4, emoji: "🐔" },
-    { fr: "l'oiseau", pt: "o pássaro", aula: 4, emoji: "🐦" },
-    { fr: "le lapin", pt: "o coelho", aula: 4, emoji: "🐰" },
-    { fr: "la souris", pt: "o rato", aula: 4, emoji: "🐭" }
+    { fr: "le chien", pt: "o cão", aula: 2, emoji: "🐶" },
+    { fr: "le chat", pt: "o gato", aula: 2, emoji: "🐱" },
+    { fr: "le cheval", pt: "o cavalo", aula: 2, emoji: "🐴" },
+    { fr: "la vache", pt: "a vaca", aula: 2, emoji: "🐮" },
+    { fr: "le mouton", pt: "a ovelha", aula: 2, emoji: "🐑" },
+    { fr: "le cochon", pt: "o porco", aula: 2, emoji: "🐷" },
+    { fr: "la poule", pt: "a galinha", aula: 2, emoji: "🐔" },
+    { fr: "l'oiseau", pt: "o pássaro", aula: 2, emoji: "🐦" },
+    { fr: "le lapin", pt: "o coelho", aula: 2, emoji: "🐰" },
+    { fr: "la souris", pt: "o rato", aula: 2, emoji: "🐭" }
   ],
   adjetivos: [
-    { fr: "grand", pt: "grande", aula: 4, emoji: "txt:Grande" },
-    { fr: "petit", pt: "pequeno", aula: 4, emoji: "txt:Pequeno" },
-    { fr: "beau", pt: "belo / bonito", aula: 4, emoji: "✨" },
-    { fr: "joli", pt: "bonito", aula: 4, emoji: "🌸" },
-    { fr: "laid", pt: "feio", aula: 4, emoji: "txt:Feio" },
-    { fr: "jeune", pt: "jovem", aula: 4, emoji: "🧒" },
-    { fr: "vieux", pt: "velho", aula: 4, emoji: "👴" },
-    { fr: "nouveau", pt: "novo", aula: 4, emoji: "🆕" },
-    { fr: "bon", pt: "bom", aula: 4, emoji: "👍" },
-    { fr: "mauvais", pt: "mau", aula: 4, emoji: "👎" },
-    { fr: "heureux", pt: "feliz", aula: 4, emoji: "😊" },
-    { fr: "triste", pt: "triste", aula: 4, emoji: "😢" },
-    { fr: "fatigué", pt: "cansado", aula: 4, emoji: "😴" },
-    { fr: "content", pt: "contente", aula: 4, emoji: "😄" },
-    { fr: "intelligent", pt: "inteligente", aula: 4, emoji: "🧠" },
-    { fr: "gentil", pt: "gentil", aula: 4, emoji: "💖" },
-    { fr: "facile", pt: "fácil", aula: 4, emoji: "✅" },
-    { fr: "difficile", pt: "difícil", aula: 4, emoji: "txt:Difícil" },
-    { fr: "cher", pt: "caro / querido", aula: 4, emoji: "💰" },
-    { fr: "rapide", pt: "rápido", aula: 4, emoji: "🏃" },
-    { fr: "lent", pt: "lento", aula: 4, emoji: "🐢" },
-    { fr: "chaud", pt: "quente", aula: 4, emoji: "🔥" },
-    { fr: "froid", pt: "frio", aula: 4, emoji: "🧊" }
+    { fr: "grand", pt: "grande", aula: 2, emoji: "txt:Grande" },
+    { fr: "petit", pt: "pequeno", aula: 2, emoji: "txt:Pequeno" },
+    { fr: "beau", pt: "belo / bonito", aula: 2, emoji: "✨" },
+    { fr: "joli", pt: "bonito", aula: 2, emoji: "🌸" },
+    { fr: "laid", pt: "feio", aula: 2, emoji: "txt:Feio" },
+    { fr: "jeune", pt: "jovem", aula: 2, emoji: "🧒" },
+    { fr: "vieux", pt: "velho", aula: 2, emoji: "👴" },
+    { fr: "nouveau", pt: "novo", aula: 2, emoji: "🆕" },
+    { fr: "bon", pt: "bom", aula: 2, emoji: "👍" },
+    { fr: "mauvais", pt: "mau", aula: 2, emoji: "👎" },
+    { fr: "heureux", pt: "feliz", aula: 2, emoji: "😊" },
+    { fr: "triste", pt: "triste", aula: 2, emoji: "😢" },
+    { fr: "fatigué", pt: "cansado", aula: 2, emoji: "😴" },
+    { fr: "content", pt: "contente", aula: 2, emoji: "😄" },
+    { fr: "intelligent", pt: "inteligente", aula: 2, emoji: "🧠" },
+    { fr: "gentil", pt: "gentil", aula: 2, emoji: "💖" },
+    { fr: "facile", pt: "fácil", aula: 2, emoji: "✅" },
+    { fr: "difficile", pt: "difícil", aula: 2, emoji: "txt:Difícil" },
+    { fr: "cher", pt: "caro / querido", aula: 2, emoji: "💰" },
+    { fr: "rapide", pt: "rápido", aula: 2, emoji: "🏃" },
+    { fr: "lent", pt: "lento", aula: 2, emoji: "🐢" },
+    { fr: "chaud", pt: "quente", aula: 2, emoji: "🔥" },
+    { fr: "froid", pt: "frio", aula: 2, emoji: "🧊" }
   ]
 };
 
@@ -356,31 +373,31 @@ const vocabUpToAula = (lvl) => ALL_VOCAB.filter(v => v.aula <= lvl);
 const VERBOS = [
   { inf: "être", pt: "ser/estar", aula: 0, grupo: 3 },
   { inf: "avoir", pt: "ter", aula: 0, grupo: 3 },
-  { inf: "aller", pt: "ir", aula: 5, grupo: 3 },
-  { inf: "faire", pt: "fazer", aula: 5, grupo: 3 },
-  { inf: "venir", pt: "vir", aula: 5, grupo: 3 },
-  { inf: "voir", pt: "ver", aula: 5, grupo: 3 },
-  { inf: "savoir", pt: "saber", aula: 5, grupo: 3 },
-  { inf: "pouvoir", pt: "poder", aula: 5, grupo: 3 },
-  { inf: "vouloir", pt: "querer", aula: 5, grupo: 3 },
-  { inf: "devoir", pt: "dever / ter de", aula: 5, grupo: 3 },
-  { inf: "prendre", pt: "pegar / tomar", aula: 5, grupo: 3 },
-  { inf: "dire", pt: "dizer", aula: 5, grupo: 3 },
-  { inf: "parler", pt: "falar", aula: 1, grupo: 1 },
-  { inf: "habiter", pt: "morar", aula: 1, grupo: 1 },
-  { inf: "aimer", pt: "amar / gostar", aula: 1, grupo: 1 },
-  { inf: "manger", pt: "comer", aula: 1, grupo: 1 },
-  { inf: "regarder", pt: "olhar / assistir", aula: 1, grupo: 1 },
-  { inf: "écouter", pt: "ouvir", aula: 1, grupo: 1 },
-  { inf: "travailler", pt: "trabalhar", aula: 1, grupo: 1 },
-  { inf: "chanter", pt: "cantar", aula: 1, grupo: 1 },
-  { inf: "danser", pt: "dançar", aula: 1, grupo: 1 },
-  { inf: "voyager", pt: "viajar", aula: 1, grupo: 1 },
-  { inf: "jouer", pt: "jogar / tocar", aula: 1, grupo: 1 },
-  { inf: "finir", pt: "terminar", aula: 4, grupo: 2 },
-  { inf: "choisir", pt: "escolher", aula: 4, grupo: 2 },
-  { inf: "réussir", pt: "ter sucesso", aula: 4, grupo: 2 },
-  { inf: "grandir", pt: "crescer", aula: 4, grupo: 2 }
+  { inf: "aller", pt: "ir", aula: 2, grupo: 3 },
+  { inf: "faire", pt: "fazer", aula: 2, grupo: 3 },
+  { inf: "venir", pt: "vir", aula: 2, grupo: 3 },
+  { inf: "voir", pt: "ver", aula: 2, grupo: 3 },
+  { inf: "savoir", pt: "saber", aula: 2, grupo: 3 },
+  { inf: "pouvoir", pt: "poder", aula: 2, grupo: 3 },
+  { inf: "vouloir", pt: "querer", aula: 2, grupo: 3 },
+  { inf: "devoir", pt: "dever / ter de", aula: 2, grupo: 3 },
+  { inf: "prendre", pt: "pegar / tomar", aula: 2, grupo: 3 },
+  { inf: "dire", pt: "dizer", aula: 2, grupo: 3 },
+  { inf: "parler", pt: "falar", aula: 0, grupo: 1 },
+  { inf: "habiter", pt: "morar", aula: 0, grupo: 1 },
+  { inf: "aimer", pt: "amar / gostar", aula: 0, grupo: 1 },
+  { inf: "manger", pt: "comer", aula: 0, grupo: 1 },
+  { inf: "regarder", pt: "olhar / assistir", aula: 0, grupo: 1 },
+  { inf: "écouter", pt: "ouvir", aula: 0, grupo: 1 },
+  { inf: "travailler", pt: "trabalhar", aula: 0, grupo: 1 },
+  { inf: "chanter", pt: "cantar", aula: 0, grupo: 1 },
+  { inf: "danser", pt: "dançar", aula: 0, grupo: 1 },
+  { inf: "voyager", pt: "viajar", aula: 0, grupo: 1 },
+  { inf: "jouer", pt: "jogar / tocar", aula: 0, grupo: 1 },
+  { inf: "finir", pt: "terminar", aula: 2, grupo: 2 },
+  { inf: "choisir", pt: "escolher", aula: 2, grupo: 2 },
+  { inf: "réussir", pt: "ter sucesso", aula: 2, grupo: 2 },
+  { inf: "grandir", pt: "crescer", aula: 2, grupo: 2 }
 ];
 
 const CONJ_IRREG = {
@@ -496,230 +513,550 @@ const FRASES = [
   { fr: "Comment vous appelez-vous?", pt: "Como te chamas? (formal)", topic: "Apresentação", aula: 0 },
   { fr: "Je m'appelle Odacil.", pt: "Chamo-me Odacil.", topic: "Apresentação", aula: 0 },
   { fr: "Quel âge as-tu?", pt: "Que idade tens?", topic: "Apresentação", aula: 0 },
-  { fr: "J'ai vingt-cinq ans.", pt: "Tenho vinte e cinco anos.", topic: "Apresentação", aula: 1 },
-  { fr: "D'où venez-vous?", pt: "De onde vens?", topic: "Apresentação", aula: 1 },
-  { fr: "Je viens du Portugal.", pt: "Venho de Portugal.", topic: "Apresentação", aula: 1 },
+  { fr: "J'ai vingt-cinq ans.", pt: "Tenho vinte e cinco anos.", topic: "Apresentação", aula: 0 },
+  { fr: "D'où venez-vous?", pt: "De onde vens?", topic: "Apresentação", aula: 0 },
+  { fr: "Je viens du Portugal.", pt: "Venho de Portugal.", topic: "Apresentação", aula: 0 },
   { fr: "Je suis portugais.", pt: "Sou português.", topic: "Apresentação", aula: 0 },
   { fr: "Enchanté de vous rencontrer.", pt: "Prazer em conhecer-vos.", topic: "Apresentação", aula: 0 },
-  { fr: "Où habitez-vous?", pt: "Onde mora?", topic: "Perguntas", aula: 1 },
-  { fr: "Où est la gare?", pt: "Onde fica a estação?", topic: "Perguntas", aula: 1 },
-  { fr: "Quelle heure est-il?", pt: "Que horas são?", topic: "Perguntas", aula: 5 },
-  { fr: "Combien ça coûte?", pt: "Quanto custa?", topic: "Perguntas", aula: 2 },
-  { fr: "Qu'est-ce que c'est?", pt: "O que é isto?", topic: "Perguntas", aula: 1 },
+  { fr: "Où habitez-vous?", pt: "Onde mora?", topic: "Perguntas", aula: 0 },
+  { fr: "Où est la gare?", pt: "Onde fica a estação?", topic: "Perguntas", aula: 0 },
+  { fr: "Quelle heure est-il?", pt: "Que horas são?", topic: "Perguntas", aula: 2 },
+  { fr: "Combien ça coûte?", pt: "Quanto custa?", topic: "Perguntas", aula: 1 },
+  { fr: "Qu'est-ce que c'est?", pt: "O que é isto?", topic: "Perguntas", aula: 0 },
   { fr: "Comment allez-vous?", pt: "Como está?", topic: "Saudações", aula: 0 },
   { fr: "Très bien, merci.", pt: "Muito bem, obrigado.", topic: "Saudações", aula: 0 },
   { fr: "Bonne journée!", pt: "Bom dia (para o dia)!", topic: "Saudações", aula: 0 },
   { fr: "Bonne soirée!", pt: "Boa noite!", topic: "Saudações", aula: 0 },
   { fr: "Bon week-end!", pt: "Bom fim-de-semana!", topic: "Saudações", aula: 0 },
-  { fr: "Bon appétit!", pt: "Bom apetite!", topic: "Saudações", aula: 2 },
-  { fr: "Santé!", pt: "Saúde! (brinde)", topic: "Saudações", aula: 2 },
-  { fr: "Je voudrais un café, s'il vous plaît.", pt: "Queria um café, por favor.", topic: "Restaurante", aula: 2 },
-  { fr: "L'addition, s'il vous plaît.", pt: "A conta, por favor.", topic: "Restaurante", aula: 2 },
-  { fr: "C'est délicieux!", pt: "Está delicioso!", topic: "Restaurante", aula: 2 },
-  { fr: "Je suis végétarien.", pt: "Sou vegetariano.", topic: "Restaurante", aula: 2 },
-  { fr: "Une table pour deux, s'il vous plaît.", pt: "Uma mesa para dois, por favor.", topic: "Restaurante", aula: 2 },
-  { fr: "Je voudrais réserver une chambre.", pt: "Queria reservar um quarto.", topic: "Viagem", aula: 1 },
-  { fr: "Où sont les toilettes?", pt: "Onde é a casa de banho?", topic: "Viagem", aula: 1 },
-  { fr: "Je suis perdu.", pt: "Estou perdido.", topic: "Viagem", aula: 1 },
-  { fr: "Pouvez-vous m'aider?", pt: "Pode ajudar-me?", topic: "Viagem", aula: 5 },
-  { fr: "À gauche / à droite / tout droit.", pt: "À esquerda / à direita / em frente.", topic: "Viagem", aula: 1 },
-  { fr: "J'aime beaucoup la musique.", pt: "Gosto muito de música.", topic: "Quotidiano", aula: 1 },
-  { fr: "Je travaille dans une banque.", pt: "Trabalho num banco.", topic: "Quotidiano", aula: 3 },
-  { fr: "Je vais au cinéma ce soir.", pt: "Vou ao cinema esta noite.", topic: "Quotidiano", aula: 5 },
-  { fr: "Je suis fatigué.", pt: "Estou cansado.", topic: "Sentimentos", aula: 4 },
-  { fr: "Je t'aime.", pt: "Amo-te.", topic: "Sentimentos", aula: 4 },
-  { fr: "Je suis content de te voir.", pt: "Estou contente em ver-te.", topic: "Sentimentos", aula: 4 }
+  { fr: "Bon appétit!", pt: "Bom apetite!", topic: "Saudações", aula: 1 },
+  { fr: "Santé!", pt: "Saúde! (brinde)", topic: "Saudações", aula: 1 },
+  { fr: "Je voudrais un café, s'il vous plaît.", pt: "Queria um café, por favor.", topic: "Restaurante", aula: 1 },
+  { fr: "L'addition, s'il vous plaît.", pt: "A conta, por favor.", topic: "Restaurante", aula: 1 },
+  { fr: "C'est délicieux!", pt: "Está delicioso!", topic: "Restaurante", aula: 1 },
+  { fr: "Je suis végétarien.", pt: "Sou vegetariano.", topic: "Restaurante", aula: 1 },
+  { fr: "Une table pour deux, s'il vous plaît.", pt: "Uma mesa para dois, por favor.", topic: "Restaurante", aula: 1 },
+  { fr: "Je voudrais réserver une chambre.", pt: "Queria reservar um quarto.", topic: "Viagem", aula: 0 },
+  { fr: "Où sont les toilettes?", pt: "Onde é a casa de banho?", topic: "Viagem", aula: 0 },
+  { fr: "Je suis perdu.", pt: "Estou perdido.", topic: "Viagem", aula: 0 },
+  { fr: "Pouvez-vous m'aider?", pt: "Pode ajudar-me?", topic: "Viagem", aula: 2 },
+  { fr: "À gauche / à droite / tout droit.", pt: "À esquerda / à direita / em frente.", topic: "Viagem", aula: 0 },
+  { fr: "J'aime beaucoup la musique.", pt: "Gosto muito de música.", topic: "Quotidiano", aula: 0 },
+  { fr: "Je travaille dans une banque.", pt: "Trabalho num banco.", topic: "Quotidiano", aula: 1 },
+  { fr: "Je vais au cinéma ce soir.", pt: "Vou ao cinema esta noite.", topic: "Quotidiano", aula: 2 },
+  { fr: "Je suis fatigué.", pt: "Estou cansado.", topic: "Sentimentos", aula: 2 },
+  { fr: "Je t'aime.", pt: "Amo-te.", topic: "Sentimentos", aula: 2 },
+  { fr: "Je suis content de te voir.", pt: "Estou contente em ver-te.", topic: "Sentimentos", aula: 2 }
 ];
 
 // ==================== MÚSICAS ====================
+// Cada música tem links para o videoclip (YouTube) e para a letra completa (Paroles.net).
+// Não incluímos as letras embutidas — clica em "📜 Letra completa" para a abrires na fonte oficial.
 const MUSICAS = [
-  { aula: 0, artista: "Édith Piaf", titulo: "La Vie en Rose", tituloPt: "A vida cor-de-rosa", yt: "https://www.youtube.com/results?search_query=edith+piaf+la+vie+en+rose" },
-  { aula: 1, artista: "Charles Aznavour", titulo: "La Bohème", tituloPt: "A Boémia", yt: "https://www.youtube.com/results?search_query=charles+aznavour+la+boheme" },
-  { aula: 2, artista: "Jacques Brel", titulo: "Ne me quitte pas", tituloPt: "Não me deixes", yt: "https://www.youtube.com/results?search_query=jacques+brel+ne+me+quitte+pas" },
-  { aula: 3, artista: "Stromae", titulo: "Papaoutai", tituloPt: "Pai onde estás", yt: "https://www.youtube.com/results?search_query=stromae+papaoutai" },
-  { aula: 4, artista: "ZAZ", titulo: "Je veux", tituloPt: "Eu quero", yt: "https://www.youtube.com/results?search_query=zaz+je+veux" },
-  { aula: 5, artista: "Joe Dassin", titulo: "Les Champs-Élysées", tituloPt: "Os Campos Elísios", yt: "https://www.youtube.com/results?search_query=joe+dassin+champs+elysees" },
-  { aula: 6, artista: "Indila", titulo: "Dernière Danse", tituloPt: "Última Dança", yt: "https://www.youtube.com/results?search_query=indila+derniere+danse" },
-  { aula: 7, artista: "Carla Bruni", titulo: "Quelqu'un m'a dit", tituloPt: "Alguém me disse", yt: "https://www.youtube.com/results?search_query=carla+bruni+quelqu+un+m+a+dit" },
-  { aula: 8, artista: "Aya Nakamura", titulo: "Djadja", tituloPt: "Djadja", yt: "https://www.youtube.com/results?search_query=aya+nakamura+djadja" }
+  { id: "piaf-vie-en-rose", aula: 0, artista: "Édith Piaf", ano: "1947", titulo: "La Vie en Rose", tituloPt: "A vida cor-de-rosa",
+    sobre: "Clássico imortal — uma das canções francesas mais conhecidas do mundo. Vocabulário: amor, vida, sentimentos.",
+    yt: "https://www.youtube.com/results?search_query=edith+piaf+la+vie+en+rose",
+    letra: "https://www.paroles.net/edith-piaf/paroles-la-vie-en-rose" },
+  { id: "aznavour-boheme", aula: 0, artista: "Charles Aznavour", ano: "1965", titulo: "La Bohème", tituloPt: "A Boémia",
+    sobre: "Nostalgia de uma juventude artística em Montmartre. Imparfait nas descrições do passado.",
+    yt: "https://www.youtube.com/results?search_query=charles+aznavour+la+boheme",
+    letra: "https://www.paroles.net/charles-aznavour/paroles-la-boheme" },
+  { id: "brel-quitte", aula: 1, artista: "Jacques Brel", ano: "1959", titulo: "Ne me quitte pas", tituloPt: "Não me deixes",
+    sobre: "Súplica amorosa intensa. Excelente para praticar imperativo negativo, futuro, conditionnel.",
+    yt: "https://www.youtube.com/results?search_query=jacques+brel+ne+me+quitte+pas",
+    letra: "https://www.paroles.net/jacques-brel/paroles-ne-me-quitte-pas" },
+  { id: "stromae-papaoutai", aula: 1, artista: "Stromae", ano: "2013", titulo: "Papaoutai", tituloPt: "Pai onde estás",
+    sobre: "Hit moderno belga sobre a ausência paterna. Linguagem coloquial, jogos de palavras.",
+    yt: "https://www.youtube.com/results?search_query=stromae+papaoutai",
+    letra: "https://www.paroles.net/stromae/paroles-papaoutai" },
+  { id: "zaz-jeveux", aula: 2, artista: "ZAZ", ano: "2010", titulo: "Je veux", tituloPt: "Eu quero",
+    sobre: "Tom jazz/manouche, rejeição do materialismo. Imperativos, vocabulário do quotidiano.",
+    yt: "https://www.youtube.com/results?search_query=zaz+je+veux",
+    letra: "https://www.paroles.net/zaz/paroles-je-veux" },
+  { id: "dassin-champs", aula: 2, artista: "Joe Dassin", ano: "1969", titulo: "Les Champs-Élysées", tituloPt: "Os Campos Elísios",
+    sobre: "Ode descontraída a Paris e ao encontro casual. Imparfait, passé composé em narrativa.",
+    yt: "https://www.youtube.com/results?search_query=joe+dassin+champs+elysees",
+    letra: "https://www.paroles.net/joe-dassin/paroles-les-champs-elysees" },
+  { id: "vegedream-coupe", aula: 2, artista: "Vegedream", ano: "2018", titulo: "Ramenez la coupe à la maison", tituloPt: "Tragam a taça para casa",
+    sobre: "Hino da seleção francesa campeã do Mundial 2018. Imperativo, nomes de jogadores, exclamativas. Excelente para empolgar o estudo!",
+    yt: "https://www.youtube.com/results?search_query=vegedream+ramenez+la+coupe+a+la+maison",
+    letra: "https://www.paroles.net/vegedream/paroles-ramenez-la-coupe-a-la-maison" },
+  { id: "mhd-afrotrap3", aula: 3, artista: "MHD", ano: "2016", titulo: "Afro Trap Part. 3 (Champions League)", tituloPt: "Afro Trap Parte 3 (Liga dos Campeões)",
+    sobre: "Pioneiro do Afro Trap francês. Argot urbano, referências futebolísticas e à cultura africana de Paris.",
+    yt: "https://www.youtube.com/results?search_query=mhd+afro+trap+part+3+champions+league",
+    letra: "https://www.paroles.net/mhd/paroles-afro-trap-part-3-champions-league" },
+  { id: "indila-derniere", aula: 3, artista: "Indila", ano: "2014", titulo: "Dernière Danse", tituloPt: "Última Dança",
+    sobre: "Pop dramática sobre dor e libertação. Ótimo para vocabulário de sentimentos e adjetivos.",
+    yt: "https://www.youtube.com/results?search_query=indila+derniere+danse",
+    letra: "https://www.paroles.net/indila/paroles-derniere-danse" },
+  { id: "bruni-quelquun", aula: 3, artista: "Carla Bruni", ano: "2002", titulo: "Quelqu'un m'a dit", tituloPt: "Alguém me disse",
+    sobre: "Estilo intimista folk. Conditionnel e expressões idiomáticas.",
+    yt: "https://www.youtube.com/results?search_query=carla+bruni+quelqu+un+m+a+dit",
+    letra: "https://www.paroles.net/carla-bruni/paroles-quelqu-un-m-a-dit" },
+  { id: "nakamura-djadja", aula: 3, artista: "Aya Nakamura", ano: "2018", titulo: "Djadja", tituloPt: "Djadja",
+    sobre: "Mega-hit afropop francês. Slang contemporâneo, francês de Paris atual — desafio para o ouvido!",
+    yt: "https://www.youtube.com/results?search_query=aya+nakamura+djadja",
+    letra: "https://www.paroles.net/aya-nakamura/paroles-djadja" }
 ];
-const LETRAS = {
-  0: [
-    { fr: "Des yeux qui font baisser les miens", pt: "Olhos que fazem baixar os meus" },
-    { fr: "Un rire qui se perd sur sa bouche", pt: "Um riso que se perde na sua boca" },
-    { fr: "Voilà le portrait sans retouche", pt: "Eis o retrato sem retoque" },
-    { fr: "De l'homme auquel j'appartiens", pt: "Do homem a quem pertenço" },
-    { fr: "Quand il me prend dans ses bras", pt: "Quando ele me toma nos braços" },
-    { fr: "Il me parle tout bas", pt: "Fala-me baixinho" },
-    { fr: "Je vois la vie en rose", pt: "Vejo a vida cor-de-rosa" }
-  ],
-  1: [
-    { fr: "Je vous parle d'un temps", pt: "Falo-vos de um tempo" },
-    { fr: "Que les moins de vingt ans", pt: "Que os menores de vinte anos" },
-    { fr: "Ne peuvent pas connaître", pt: "Não podem conhecer" },
-    { fr: "Montmartre en ce temps-là", pt: "Montmartre naquele tempo" },
-    { fr: "Accrochait ses lilas", pt: "Pendurava os seus lilases" },
-    { fr: "La bohème, la bohème", pt: "A boémia, a boémia" },
-    { fr: "Ça voulait dire on est heureux", pt: "Queria dizer somos felizes" }
-  ],
-  2: [
-    { fr: "Ne me quitte pas", pt: "Não me deixes" },
-    { fr: "Il faut oublier", pt: "É preciso esquecer" },
-    { fr: "Tout peut s'oublier", pt: "Tudo pode esquecer-se" },
-    { fr: "Qui s'enfuit déjà", pt: "Que já foge" },
-    { fr: "Oublier le temps", pt: "Esquecer o tempo" },
-    { fr: "Des malentendus", pt: "Dos mal-entendidos" },
-    { fr: "Et le temps perdu", pt: "E o tempo perdido" }
-  ],
-  3: [
-    { fr: "Dites-moi d'où il vient", pt: "Digam-me de onde ele vem" },
-    { fr: "Enfin je saurai où je vais", pt: "Por fim saberei para onde vou" },
-    { fr: "Maman dit que lorsqu'on cherche bien", pt: "A mãe diz que quando se procura bem" },
-    { fr: "On finit toujours par trouver", pt: "Acaba-se sempre por encontrar" },
-    { fr: "Où est ton papa?", pt: "Onde está o teu pai?" },
-    { fr: "Dis-moi où est ton papa", pt: "Diz-me onde está o teu pai" }
-  ],
-  4: [
-    { fr: "Donnez-moi une suite au Ritz", pt: "Deem-me uma suite no Ritz" },
-    { fr: "Je n'en veux pas", pt: "Não a quero" },
-    { fr: "Des bijoux de chez Chanel", pt: "Joias da Chanel" },
-    { fr: "Moi je veux de l'amour", pt: "Eu, eu quero amor" },
-    { fr: "De la joie, de la bonne humeur", pt: "Alegria, bom humor" },
-    { fr: "Ce n'est pas votre argent qui fera mon bonheur", pt: "Não é o vosso dinheiro que fará a minha felicidade" }
-  ],
-  5: [
-    { fr: "Je m'baladais sur l'avenue", pt: "Passeava pela avenida" },
-    { fr: "Le cœur ouvert à l'inconnu", pt: "O coração aberto ao desconhecido" },
-    { fr: "J'avais envie de dire bonjour", pt: "Tinha vontade de dizer olá" },
-    { fr: "Aux Champs-Élysées", pt: "Nos Campos Elísios" },
-    { fr: "Au soleil, sous la pluie", pt: "Ao sol, à chuva" },
-    { fr: "Il y a tout ce que vous voulez", pt: "Há tudo o que vocês querem" }
-  ],
-  6: [
-    { fr: "Oh ma douce souffrance", pt: "Ó meu doce sofrimento" },
-    { fr: "Pourquoi s'acharner, tu recommences?", pt: "Porquê insistir, recomeças?" },
-    { fr: "Je ne suis qu'un être sans importance", pt: "Sou apenas um ser sem importância" },
-    { fr: "Je déambule seule dans le métro", pt: "Vagueio sozinha no metro" },
-    { fr: "Une dernière danse", pt: "Uma última dança" }
-  ],
-  7: [
-    { fr: "On me dit que nos vies", pt: "Dizem-me que as nossas vidas" },
-    { fr: "Ne valent pas grand-chose", pt: "Não valem grande coisa" },
-    { fr: "Elles passent en un instant", pt: "Passam num instante" },
-    { fr: "Comme fanent les roses", pt: "Como murcham as rosas" },
-    { fr: "Mais quelqu'un m'a dit", pt: "Mas alguém me disse" }
-  ],
-  8: [
-    { fr: "Oh Djadja", pt: "Oh Djadja" },
-    { fr: "Y'a pas moyen Djadja", pt: "Não dá Djadja" },
-    { fr: "J'suis pas ta catin Djadja", pt: "Não sou tua cabra Djadja" }
-  ]
-};
+// LETRAS removidas — letras completas via link externo paroles.net (na própria fonte oficial).
 
-// ==================== AULAS ====================
+// ==================== MÓDULOS (apostila PFV — 4 módulos, 52 leçons) ====================
+// Internamente índice 0..3; UI mostra "Module 1..4"
 const AULAS = [
-  { n: 0, titulo: "Bases · Bienvenue!", subtitulo: "Alfabeto, saudações, être",
+  { n: 0, titulo: "Module 1 — Bases", subtitulo: "Présent, articles, être/avoir, passé composé — 16 leçons",
     pontos: [
-      { secao: "Sobre a língua", titulo: "Por que estudar francês?",
-        conteudo: ["O **francês** é língua oficial de **29 países**, falada por **300 milhões** no mundo.","Língua das **artes, gastronomia, diplomacia** e da **União Europeia**.","Próxima do português — partilham vocabulário e estrutura latina."] },
-      { secao: "Alfabeto & sons", titulo: "O alfabeto francês",
-        conteudo: ["26 letras com pronúncia diferente:","• **A** /a/ · **E** /eu/ · **I** /i/ · **O** /o/ · **U** /ü/ — som de \"u\" alemão","• **R** — som gutural na garganta","• **H** — sempre mudo (silencioso)","• **J** /ji/ · **G** antes de e/i = /ji/ (génie)","• **C** antes de e/i = /s/ (ciel)"] },
-      { secao: "Saudações", titulo: "Bonjour, bonsoir, salut",
-        conteudo: ["**Bonjour** — Bom dia / Olá (qualquer hora)","**Bonsoir** — Boa tarde/noite (a partir das 18h)","**Bonne nuit** — Boa noite (ao deitar)","**Salut** — Olá / Tchau (informal)","**Au revoir** — Adeus / Até logo","**À bientôt** — Até breve · **À demain** — Até amanhã"] },
-      { secao: "Pronomes sujeito", titulo: "Je, tu, il, elle…",
-        conteudo: ["• **Je** = Eu (J' antes de vogal: J'habite)","• **Tu** = Tu (informal)","• **Il / Elle / On** = Ele / Ela / A gente","• **Nous** = Nós · **Vous** = Vós / Vocês / Você formal","• **Ils / Elles** = Eles / Elas"] },
-      { secao: "Verbo ÊTRE", titulo: "Ser/Estar — irregular",
-        conteudo: ["• Je **suis** · Tu **es** · Il/Elle **est**","• Nous **sommes** · Vous **êtes** · Ils/Elles **sont**","Verbo mais importante — decora!","*Je suis portugais.* — Sou português.","*Nous sommes en vacances.* — Estamos de férias."] }
+      { secao: "Bases (Leçons 1-2)", titulo: "Leçon 1 — Pronoms sujets · Présent de l'indicatif",
+        conteudo: [
+          "**Pronomes pessoais sujeito:**",
+          "• **Je** = Eu (J' antes de vogal: J'habite)",
+          "• **Tu** = Tu (informal)",
+          "• **Il / Elle / On** = Ele / Ela / A gente",
+          "• **Nous** = Nós · **Vous** = Vós/Você formal · **Ils/Elles** = Eles/Elas",
+          "**Verbos -ER (1º grupo):** retira -er e adiciona **-e, -es, -e, -ons, -ez, -ent**.",
+          "• je parle · tu parles · il parle · nous parlons · vous parlez · ils parlent",
+          "⚠️ -e, -es, -e, -ent são silenciosos!"
+        ] },
+      { secao: "Bases (Leçons 1-2)", titulo: "Leçon 2 — Verbe ÊTRE · Négation · Poser une question",
+        conteudo: [
+          "**ÊTRE (ser/estar)** — irregular:",
+          "• je **suis** · tu **es** · il **est** · nous **sommes** · vous **êtes** · ils **sont**",
+          "**Negação:** ne + verbo + pas. Antes de vogal: n'.",
+          "*Je **ne** parle **pas** français.* · *Il **n'**est **pas** content.*",
+          "**Perguntas** — 3 formas: entonação (Tu viens?), Est-ce que (Est-ce que tu viens?), inversão (Viens-tu?)."
+        ] },
+      { secao: "Artigos & quantidade (Leçons 3-4)", titulo: "Leçon 3 — Articles définis/indéfinis · Il y a",
+        conteudo: [
+          "**Artigos definidos:** le (masc.), la (fem.), l' (vogal/h mudo), les (plural).",
+          "**Artigos indefinidos:** un, une, des.",
+          "**Il y a** = há (sing. ou pl.). Negação: *il n'y a pas **de** + nome* (sem artigo).",
+          "⚠️ Na negação, un/une/des → **de**: *J'ai un chien → Je n'ai pas **de** chien.*"
+        ] },
+      { secao: "Artigos & quantidade (Leçons 3-4)", titulo: "Leçon 4 — Verbes -ER (II) · C'est / Ce sont",
+        conteudo: [
+          "Mais verbos -ER: écouter, aimer, regarder, manger, adorer, détester, danser.",
+          "**C'est** + nome (sing.): identifica. *C'est la Tour Eiffel.*",
+          "**Ce sont** + plural: *Ce sont mes amis.*",
+          "Diferença: *Il est professeur* (profissão, sem artigo) vs *C'est un professeur* (com artigo)."
+        ] },
+      { secao: "Avoir, prepôs., plural (Leçons 5-6)", titulo: "Leçon 5 — Avoir · Connaître · Mots interrogatifs · DE",
+        conteudo: [
+          "**AVOIR (ter):** j'**ai** · tu **as** · il **a** · nous **avons** · vous **avez** · ils **ont**.",
+          "**CONNAÎTRE (conhecer):** je connais · tu connais · il connaît · nous connaissons · vous connaissez · ils connaissent.",
+          "**Palavras interrogativas:** qui, que/qu'est-ce que, où, quand, pourquoi, comment, combien, quel.",
+          "**DE** = de (posse/origem). Contrai: de+le=**du**, de+les=**des**. *La maison **du** professeur.*"
+        ] },
+      { secao: "Avoir, prepôs., plural (Leçons 5-6)", titulo: "Leçon 6 — Prépositions · Masc/Fem · Le pluriel",
+        conteudo: [
+          "**Países:** à + cidade (à Paris), en + país fem. (en France), au + país masc. (au Brésil), aux + plural (aux États-Unis).",
+          "**Feminino:** adiciona -e (petit → petite). Exceções: beau→belle, vieux→vieille, gentil→gentille, heureux→heureuse.",
+          "**Plural:** +s (mudo). Em -s/-x/-z: invariável. Em -al → **-aux** (journal → journaux)."
+        ] },
+      { secao: "Verbos -IR, -RE, jouer/faire (Leçons 7-8)", titulo: "Leçon 7 — Verbes 2º e 3º grupo · Pronoms toniques",
+        conteudo: [
+          "**2º grupo (-IR):** finir → je finis · nous fin**iss**ons · ils fin**iss**ent. (Insere -iss-)",
+          "**3º grupo (irregulares):** prendre, dire, voir, faire, aller, venir, vouloir, pouvoir, devoir.",
+          "**Pronomes tônicos:** moi, toi, lui, elle, nous, vous, eux, elles.",
+          "Usados após preposição (*chez **lui***), em comparações (*plus grand que **moi***), em ênfase (***Moi**, j'aime…*)."
+        ] },
+      { secao: "Verbos -IR, -RE, jouer/faire (Leçons 7-8)", titulo: "Leçon 8 — Verbes JOUER & FAIRE",
+        conteudo: [
+          "**JOUER** = jogar/tocar:",
+          "• jouer **à** + esporte/jogo: *jouer **au** foot, **aux** cartes*",
+          "• jouer **de** + instrumento: *jouer **du** piano, **de la** guitare*",
+          "**FAIRE** (irregular): je fais · tu fais · il fait · nous faisons · vous **faites** · ils **font**.",
+          "Expressões: *faire du sport, faire la cuisine, faire les courses, faire la vaisselle*."
+        ] },
+      { secao: "Futuro próximo & passado (Leçons 9-12)", titulo: "Leçon 9 — Verbe ALLER · Futur proche",
+        conteudo: [
+          "**ALLER (ir):** je **vais** · tu **vas** · il **va** · nous **allons** · vous **allez** · ils **vont**.",
+          "Preposições: *aller **à** Paris · **en** France · **au** Brésil · **chez** Pierre*.",
+          "**Futur proche** = aller (pres.) + infinitivo. *Je **vais manger** demain.* = Vou comer amanhã."
+        ] },
+      { secao: "Futuro próximo & passado (Leçons 9-12)", titulo: "Leçon 10 — Le passé composé (I)",
+        conteudo: [
+          "**Fórmula:** avoir/être (presente) + particípio.",
+          "**Particípios:** -ER → **-é** (parlé), -IR → **-i** (fini), -RE → **-u** (vendu).",
+          "**Irregulares comuns:** être→été, avoir→eu, faire→fait, voir→vu, prendre→pris, mettre→mis, dire→dit.",
+          "*J'**ai mangé** une pizza.* · *Tu **as fini** tes devoirs.*"
+        ] },
+      { secao: "Futuro próximo & passado (Leçons 9-12)", titulo: "Leçon 11 — Dire l'heure",
+        conteudo: [
+          "**Quelle heure est-il?** = Que horas são?",
+          "• *Il est une heure.* — É 1h.",
+          "• *Il est trois heures **et quart**.* — 3h15",
+          "• *Il est cinq heures **et demie**.* — 5h30",
+          "• *Il est six heures **moins le quart**.* — 5h45",
+          "• *Il est **midi** / **minuit**.* — meio-dia / meia-noite",
+          "Formato 24h: *quatorze heures trente* = 14h30."
+        ] },
+      { secao: "Futuro próximo & passado (Leçons 9-12)", titulo: "Leçon 12 — Passé composé (II) com ÊTRE",
+        conteudo: [
+          "Alguns verbos usam **ÊTRE** no passado — movimento e mudança de estado:",
+          "*aller, venir, arriver, partir, entrer, sortir, monter, descendre, naître, mourir, rester, tomber, retourner* + todos os pronominais.",
+          "⚠️ Com ÊTRE, o particípio **concorda** com o sujeito:",
+          "• *Il est all**é**.* · *Elle est all**ée**.* · *Ils sont all**és**.* · *Elles sont all**ées**.*"
+        ] },
+      { secao: "Comparar & demonstrar (Leçons 13-14)", titulo: "Leçon 13 — Comparatifs et superlatifs",
+        conteudo: [
+          "**Comparativos:** plus/moins/aussi + adj + que.",
+          "*Il est **plus** grand **que** moi.* · *Elle est **aussi** belle **que** sa sœur.*",
+          "**Irregulares:** bon → **meilleur** · bien → **mieux**.",
+          "**Superlativos:** *le/la/les **plus** + adj*: *C'est **le plus** beau musée de Paris.*"
+        ] },
+      { secao: "Comparar & demonstrar (Leçons 13-14)", titulo: "Leçon 14 — Démonstratifs",
+        conteudo: [
+          "**Adjetivos demonstrativos:**",
+          "• **ce** + masc.: *ce livre*",
+          "• **cet** + masc. + vogal/h mudo: *cet hôtel, cet ami*",
+          "• **cette** + fem.: *cette maison*",
+          "• **ces** + plural: *ces enfants*",
+          "Para distinguir este/aquele: **-ci** (perto) ou **-là** (longe). *ce livre-**ci** / ce livre-**là***"
+        ] },
+      { secao: "Perguntas & posses (Leçons 15-16)", titulo: "Leçon 15 — Les questions III — registros",
+        conteudo: [
+          "3 registros de pergunta:",
+          "• **Familiar:** Tu fais quoi? · Il est où?",
+          "• **Padrão:** Qu'est-ce que tu fais? · Où est-ce qu'il est?",
+          "• **Formal:** Que fais-tu? · Où est-il?",
+          "Em inversão, 3ª pessoa que acaba em vogal recebe **-t-**: *A-**t**-il faim? · Va-**t**-elle au cinéma?*"
+        ] },
+      { secao: "Perguntas & posses (Leçons 15-16)", titulo: "Leçon 16 — Adjectifs possessifs",
+        conteudo: [
+          "Concordam com o **objeto possuído**, não com o dono!",
+          "• je → **mon/ma/mes** · tu → **ton/ta/tes** · il/ela → **son/sa/ses**",
+          "• nous → **notre/nos** · vous → **votre/vos** · ils/elas → **leur/leurs**",
+          "⚠️ Antes de vogal/h mudo, fem. sing. vira masc.: *mon amie* (não \"ma amie\")."
+        ] }
     ] },
-  { n: 1, titulo: "Dia-a-dia · Présent", subtitulo: "Artigos, verbos -ER, negação, il y a",
+  { n: 1, titulo: "Module 2 — Intermédiaire", subtitulo: "Partitifs, COD/COI, imparfait, discurso reportado — 16 leçons",
     pontos: [
-      { secao: "Artigos definidos", titulo: "le, la, l', les",
-        conteudo: ["Todo nome francês tem **gênero** (masc. ou fem.):","• **le** — masculino: *le café*","• **la** — feminino: *la maison*","• **l'** — antes de vogal/h mudo: *l'hôtel*","• **les** — plural: *les amis*"] },
-      { secao: "Artigos indefinidos", titulo: "un, une, des",
-        conteudo: ["• **un** (masc.): *un livre*","• **une** (fem.): *une voiture*","• **des** (plural): *des amis*","⚠️ Na negação, **un/une/des → de**:","*J'ai **un** chien → Je n'ai pas **de** chien.*"] },
-      { secao: "Verbos -ER (1º grupo)", titulo: "parler, habiter, voyager",
-        conteudo: ["Retira **-er** e adiciona: -e, -es, -e, -ons, -ez, -ent.","• je parle · tu parles · il parle","• nous parlons · vous parlez · ils parlent","⚠️ As terminações **-e, -es, -e, -ent** são silenciosas!","Mais de **90% dos verbos** são deste grupo."] },
-      { secao: "Negação", titulo: "ne … pas",
-        conteudo: ["**ne + verbo + pas**:","*Je **ne** parle **pas** français.*","Antes de vogal, **ne → n'**: *Il **n'**est **pas** content.*","Na fala informal o **ne** é omitido: *Je sais pas.*"] },
-      { secao: "Il y a", titulo: "há / existe",
-        conteudo: ["**Il y a** = há (singular OU plural):","• *Il y a un café au coin.*","• *Il y a des étudiants.*","Negação: **il n'y a pas de** + nome (sem artigo):","*Il n'y a pas **de** problème.*"] }
+      { secao: "Quantidade & ordens (Leçons 17-19)", titulo: "Leçon 17 — Les partitifs",
+        conteudo: [
+          "**Partitivos** = quantidade indeterminada (≈ \"do/da\"):",
+          "• **du** + masc.: *du pain*",
+          "• **de la** + fem.: *de la viande*",
+          "• **de l'** + vogal: *de l'eau*",
+          "• **des** + plural: *des fruits*",
+          "⚠️ Negação → **de**: *Je ne mange pas **de** pain.*",
+          "Diferença: *J'aime **le** café* (em geral) vs *Je bois **du** café* (uma quantidade)."
+        ] },
+      { secao: "Quantidade & ordens (Leçons 17-19)", titulo: "Leçon 18 — Pronoms toniques (Partie II)",
+        conteudo: [
+          "Tônicos: moi, toi, lui, elle, nous, vous, eux, elles. Usos:",
+          "• Após preposição: *chez **lui**, avec **nous**, pour **eux***.",
+          "• Ênfase: ***Moi**, je préfère le thé.*",
+          "• Em respostas curtas: *— Qui veut? — **Moi**!*",
+          "• Com **-même**: *moi-même* = eu mesmo."
+        ] },
+      { secao: "Quantidade & ordens (Leçons 17-19)", titulo: "Leçon 19 — L'impératif · Mots de quantité",
+        conteudo: [
+          "**Imperativo:** usa-se 3 pessoas SEM pronome.",
+          "*Parle! · Parlons! · Parlez!* (-ER perde o -s no tu)",
+          "Irregulares: *être→sois/soyons/soyez* · *avoir→aie/ayons/ayez*.",
+          "**Quantidade:** *beaucoup de, peu de, un peu de, assez de, trop de* — sempre + **de** (sem artigo)."
+        ] },
+      { secao: "Pronominais & deslocamento (Leçons 20-22)", titulo: "Leçon 20 — Les verbes pronominaux",
+        conteudo: [
+          "Verbos com pronome reflexivo: se lever, se laver, s'habiller, s'appeler, se coucher, se reposer.",
+          "**me, te, se, nous, vous, se** — antes do verbo.",
+          "*Je m'appelle Marie. · Nous nous levons à 7h.*",
+          "⚠️ No passé composé, todos com **être** + concordância: *Elle s'est lev**ée**.*"
+        ] },
+      { secao: "Pronominais & deslocamento (Leçons 20-22)", titulo: "Leçon 21 — Verbes de déplacement",
+        conteudo: [
+          "Verbos de movimento — usam **ÊTRE** no passado:",
+          "*aller ↔ venir · arriver ↔ partir · entrer ↔ sortir · monter ↔ descendre · rentrer · retourner*.",
+          "Preposições: *venir **de** Lisbonne · partir **pour** Paris · passer **par** Madrid · arriver **à** Lyon*.",
+          "**venir de + infinitivo** = acabar de: *Je viens de manger.*"
+        ] },
+      { secao: "Pronominais & deslocamento (Leçons 20-22)", titulo: "Leçon 22 — Exprimer un besoin",
+        conteudo: [
+          "**avoir besoin de** + nome/inf: *J'ai besoin de toi. · J'ai besoin de dormir.*",
+          "**il faut** + infinitivo: *Il faut manger.*",
+          "**devoir** = ter de: je dois · tu dois · il doit · nous devons · vous devez · ils doivent.",
+          "**vouloir** = querer: je veux · tu veux · il veut · nous voulons · vous voulez · ils veulent.",
+          "**pouvoir** = poder: je peux · tu peux · il peut · nous pouvons · vous pouvez · ils peuvent."
+        ] },
+      { secao: "Posições & duração (Leçons 23-24)", titulo: "Leçon 23 — Positions",
+        conteudo: [
+          "**Preposições de lugar:** sur (em cima), sous (debaixo), dans (dentro), devant (à frente), derrière (atrás), à côté de (ao lado), entre, en face de (em frente), près de (perto), loin de (longe), au-dessus/dessous de (acima/abaixo)."
+        ] },
+      { secao: "Posições & duração (Leçons 23-24)", titulo: "Leçon 24 — Exprimer la durée",
+        conteudo: [
+          "• **depuis** = desde / há (ação contínua): *J'habite ici **depuis** 5 ans.*",
+          "• **il y a** = há (ação terminada): *J'ai déménagé **il y a** 5 ans.*",
+          "• **pendant** = durante: *J'ai vécu là **pendant** 3 ans.*",
+          "• **dans** = daqui a (futuro): *Je pars **dans** deux jours.*",
+          "• **pour** = por (planeado): *Je pars **pour** une semaine.*"
+        ] },
+      { secao: "Imparfait & ligações (Leçons 25-26)", titulo: "Leçon 25 — L'imparfait",
+        conteudo: [
+          "**Imparfait** = pretérito imperfeito (eu falava, morava).",
+          "Usos: descrição no passado, hábitos, ação em curso interrompida.",
+          "**Formação:** raiz do *nous* presente + -ais, -ais, -ait, -ions, -iez, -aient.",
+          "*nous parl**ons** → je parl**ais** · nous parl**ions***",
+          "**Exceção:** être → j'étais, tu étais, il était, nous étions, vous étiez, ils étaient."
+        ] },
+      { secao: "Imparfait & ligações (Leçons 25-26)", titulo: "Leçon 26 — Mots de liaison",
+        conteudo: [
+          "Conectores essenciais:",
+          "• Adição: et, aussi, en plus, de plus",
+          "• Causa: parce que, car, puisque",
+          "• Consequência: donc, alors, c'est pourquoi",
+          "• Sequência: d'abord, puis, ensuite, enfin",
+          "• Oposição: mais, cependant, pourtant, en revanche"
+        ] },
+      { secao: "Pronomes COD/COI (Leçons 27-28)", titulo: "Leçon 27 — Les pronoms COD",
+        conteudo: [
+          "**COD** substitui complemento sem preposição:",
+          "• me, te, **le, la**, nous, vous, **les**",
+          "• *Tu vois Marie? → Oui, je **la** vois.*",
+          "• *Tu manges les fruits? → Je **les** mange.*",
+          "Posição: **antes** do verbo. Passé composé: particípio concorda. *Je **l'**ai vu**e**.*"
+        ] },
+      { secao: "Pronomes COD/COI (Leçons 27-28)", titulo: "Leçon 28 — Les pronoms COI",
+        conteudo: [
+          "**COI** substitui *à + pessoa*:",
+          "• me, te, **lui**, nous, vous, **leur**",
+          "• *Je parle **à Pierre** → Je **lui** parle.*",
+          "• *J'écris **à mes amis** → Je **leur** écris.*",
+          "Verbos com COI: *parler à, dire à, donner à, écrire à, téléphoner à, demander à*."
+        ] },
+      { secao: "Situar & reportar (Leçons 29-30)", titulo: "Leçon 29 — Situer l'action",
+        conteudo: [
+          "Expressões temporais: *en ce moment, maintenant, aujourd'hui, hier, demain, la veille (véspera), le lendemain (dia seguinte), à l'époque, autrefois, de nos jours*.",
+          "\"Estar a fazer\" → **être en train de** + infinitivo:",
+          "*Je suis en train d'étudier.* = Estou a estudar."
+        ] },
+      { secao: "Situar & reportar (Leçons 29-30)", titulo: "Leçon 30 — Discours rapporté · Action dans le temps",
+        conteudo: [
+          "**Discurso indireto (presente):** verbo introdutor + **que** + frase.",
+          "*Il dit qu'il est fatigué. · Elle pense que c'est bon.*",
+          "**Ação no tempo:**",
+          "• **venir de** + inf = acabar de (passado recente)",
+          "• **être en train de** + inf = estar a (presente)",
+          "• **aller** + inf = futur proche"
+        ] },
+      { secao: "Caracterizar & ordens (Leçons 31-32)", titulo: "Leçon 31 — Caractériser",
+        conteudo: [
+          "• **avoir l'air** + adj = parecer: *Elle **a l'air** heureuse.*",
+          "• **ressembler à** = parecer-se com: *Il **ressemble à** son père.*",
+          "• **sembler** = parecer.",
+          "**Adjetivos** — maioria vem **depois**; BAGS (Beauty, Age, Goodness, Size) vêm antes: *une **belle** maison, un **jeune** homme, une **bonne** idée, un **grand** jardin*."
+        ] },
+      { secao: "Caracterizar & ordens (Leçons 31-32)", titulo: "Leçon 32 — L'impératif avec un pronom",
+        conteudo: [
+          "**Imperativo afirmativo:** pronome **depois** do verbo, ligado por hífen:",
+          "*Donne-**moi**! · Regarde-**la**! · Écoute-**les**!*",
+          "**Imperativo negativo:** pronome volta antes:",
+          "*Ne **me** dis pas ça! · Ne **le** regarde pas!*"
+        ] }
     ] },
-  { n: 2, titulo: "Comida & Casa", subtitulo: "Partitivos, avoir, perguntas",
+  { n: 2, titulo: "Module 3 — Avancé", subtitulo: "Futur simple, conditionnel, hypothèses, voix passive — 10 leçons",
     pontos: [
-      { secao: "Partitivos", titulo: "du, de la, de l', des",
-        conteudo: ["**Quantidade indeterminada** (≈ \"do/da\"):","• **du** + masc.: *du pain*","• **de la** + fem.: *de la viande*","• **de l'** + vogal: *de l'eau*","• **des** + plural: *des fruits*","Negação: vira **de**: *Je ne mange pas **de** pain.*"] },
-      { secao: "AVOIR", titulo: "Verbo ter — irregular",
-        conteudo: ["• j'ai · tu as · il a","• nous avons · vous avez · ils ont","Expressões:","• **avoir faim** — estar com fome","• **avoir soif** — estar com sede","• **avoir chaud/froid** — estar com calor/frio","• **avoir … ans** — ter … anos"] },
-      { secao: "Perguntas", titulo: "3 maneiras",
-        conteudo: ["**1. Entonação** (informal): *Tu viens?*","**2. Est-ce que** (neutro): *Est-ce que tu viens?*","**3. Inversão** (formal): *Viens-tu?*","Palavras: **qui, que, où, quand, pourquoi, comment, combien, quel**."] },
-      { secao: "Quantidades", titulo: "beaucoup, peu, trop",
-        conteudo: ["Sempre seguidas de **de** (sem artigo):","• **beaucoup de** — muito","• **peu de** — pouco","• **un peu de** — um pouco","• **assez de** — o suficiente","• **trop de** — demais"] }
+      { secao: "Adição/causa & futur (Leçon 33)", titulo: "Leçon 33A — L'addition, la cause, la conséquence",
+        conteudo: [
+          "**Conectores avançados:**",
+          "• Adição: *de plus, en outre, par ailleurs*",
+          "• Causa: *parce que, car, puisque, étant donné que*",
+          "• Consequência: *donc, alors, c'est pourquoi, par conséquent*"
+        ] },
+      { secao: "Adição/causa & futur (Leçon 33)", titulo: "Leçon 33B — Le futur simple",
+        conteudo: [
+          "**Formação:** infinitivo + -ai, -as, -a, -ons, -ez, -ont.",
+          "• je parler**ai** · tu parler**as** · il parler**a***",
+          "Verbos -RE: retira-se o -e. *prendre → je prendr**ai***.",
+          "Usos: previsões, promessas, planos a longo prazo."
+        ] },
+      { secao: "Futur exceções (Leçon 34)", titulo: "Leçon 34 — Le futur simple — Exceptions",
+        conteudo: [
+          "Verbos com **raiz irregular** no futuro (terminações iguais):",
+          "• être → **ser-** (je serai) · avoir → **aur-** (j'aurai)",
+          "• aller → **ir-** (j'irai) · faire → **fer-** (je ferai)",
+          "• pouvoir → **pourr-** · vouloir → **voudr-** · devoir → **devr-**",
+          "• venir → **viendr-** · voir → **verr-** · savoir → **saur-**",
+          "• il faut → **il faudra**"
+        ] },
+      { secao: "Oposição & passive (Leçon 35)", titulo: "Leçon 35A — L'opposition, l'ordre, la référence",
+        conteudo: [
+          "**Oposição:** *mais, cependant, pourtant, néanmoins, en revanche, par contre, malgré (+ nome), bien que (+ subj.)*.",
+          "*Il pleut, **pourtant** je sors.* · ***Malgré** la pluie, on part.*"
+        ] },
+      { secao: "Oposição & passive (Leçon 35)", titulo: "Leçon 35B — La voix passive",
+        conteudo: [
+          "Sujeito + **être** + particípio (concorda).",
+          "Ativo: *Le chef prépare le repas.*",
+          "Passivo: *Le repas **est préparé** par le chef.*",
+          "Concordância: *La porte est ferm**ée**. · Les portes sont ferm**ées**.*"
+        ] },
+      { secao: "Demonstrativos avançados (Leçon 36)", titulo: "Leçon 36 — Adjectifs, Pronoms démonstratifs",
+        conteudo: [
+          "**Pronomes demonstrativos** (substituem o nome):",
+          "• masc.: **celui** (sing.) / **ceux** (pl.)",
+          "• fem.: **celle** (sing.) / **celles** (pl.)",
+          "Geralmente seguidos: *-ci/-là* (este/aquele), *de + nome* (celui de Paul), *qui/que* (ceux qui parlent).",
+          "Neutros: **ce, ceci, cela, ça**."
+        ] },
+      { secao: "Condição & faire (Leçon 37)", titulo: "Leçon 37A — Condition, finalité, illustration",
+        conteudo: [
+          "**Condição:** *si* + presente, futuro/presente. *Si tu viens, on ira au ciné.*",
+          "**Finalidade:** *pour, afin de* + infinitivo · *pour que, afin que* + subjuntivo.",
+          "*J'étudie **pour** réussir.* · *Je te le dis **pour que** tu saches.*"
+        ] },
+      { secao: "Condição & faire (Leçon 37)", titulo: "Leçon 37B — Laisser/Faire/Rendre + inf/adj",
+        conteudo: [
+          "• **Faire + infinitivo** = mandar/fazer com que: *Je **fais** réparer ma voiture.*",
+          "• **Laisser + infinitivo** = deixar: *Laisse-moi parler.*",
+          "• **Rendre + adjetivo** = tornar: *Cette musique me **rend** triste.*"
+        ] },
+      { secao: "Resumo & gérondif (Leçon 38)", titulo: "Leçon 38A — Le résumé, la temporalité",
+        conteudo: [
+          "Conectores de tempo: *avant (que), après (que), pendant (que), jusqu'à (ce que), dès que, aussitôt que, depuis que*.",
+          "Resumir: *en somme, en bref, en résumé, finalement, bref*."
+        ] },
+      { secao: "Resumo & gérondif (Leçon 38)", titulo: "Leçon 38B — Le gérondif · Le participe présent",
+        conteudo: [
+          "**Participe présent:** raiz do *nous* + **-ant**. *parlons → parlant.*",
+          "Exceções: *étant, ayant, sachant*.",
+          "**Gérondif** = **en** + participe présent → simultaneidade/modo:",
+          "*Il chante **en travaillant**.* — Canta enquanto trabalha.",
+          "*En **étudiant**, tu réussiras.* — Estudando, terás sucesso."
+        ] },
+      { secao: "Negação & condicional (Leçons 39-40)", titulo: "Leçon 39 — L'article après une négation",
+        conteudo: [
+          "Em negação, **un/une/des** e partitivos (du/de la/des) viram **de**:",
+          "*J'ai un chat. → Je n'ai pas **de** chat.*",
+          "*Je bois du vin. → Je ne bois pas **de** vin.*",
+          "⚠️ Exceções: com **être**, mantém-se o artigo. *C'est un chat. → Ce n'est pas **un** chat.*",
+          "Artigos definidos (le, la, les) também NÃO mudam."
+        ] },
+      { secao: "Negação & condicional (Leçons 39-40)", titulo: "Leçon 40 — Le conditionnel · Le conditionnel passé",
+        conteudo: [
+          "**Conditionnel présent** = falaria, iria…",
+          "**Fórmula:** raiz do *futur* + terminações do *imparfait* (-ais, -ais, -ait, -ions, -iez, -aient).",
+          "*je parler**ais** · nous parler**ions***",
+          "Usos: pedidos educados (*Je **voudrais**…*), conselhos (*Tu **devrais**…*), hipóteses.",
+          "**Conditionnel passé** = avoir/être (cond.) + particípio: *J'**aurais aimé** venir* = teria gostado."
+        ] },
+      { secao: "Plus-que-parfait & hipóteses (Leçons 41-42)", titulo: "Leçon 41 — Le plus-que-parfait",
+        conteudo: [
+          "**Plus-que-parfait** = passado anterior a outro passado (\"tinha falado\").",
+          "**Fórmula:** avoir/être (imparfait) + particípio.",
+          "*J'**avais déjà fini** quand tu es arrivé.* — Já tinha acabado quando chegaste."
+        ] },
+      { secao: "Plus-que-parfait & hipóteses (Leçons 41-42)", titulo: "Leçon 42 — Faire des hypothèses",
+        conteudo: [
+          "**3 tipos de hipóteses com SI:**",
+          "**1. Possível:** *si + présent → présent/futur*",
+          "*Si tu viens, on **ira** au ciné.*",
+          "**2. Irreal presente:** *si + imparfait → conditionnel présent*",
+          "*Si j'**étais** riche, j'**achèterais** un château.*",
+          "**3. Irreal passado:** *si + plus-que-parfait → conditionnel passé*",
+          "*Si j'**avais su**, je ne **serais** pas **venu**.*",
+          "⚠️ NUNCA usar futur ou conditionnel depois de **si**!"
+        ] }
     ] },
-  { n: 3, titulo: "Família & Profissões", subtitulo: "Possessivos, descrever pessoas",
+  { n: 3, titulo: "Module 4 — Avancé +", subtitulo: "Discours indirect, EN/Y, subjonctif, relatifs, passé simple — 10 leçons",
     pontos: [
-      { secao: "Possessivos", titulo: "mon, ma, mes…",
-        conteudo: ["Concordam com o **objeto possuído**:","• **mon/ma/mes** — meu(s)","• **ton/ta/tes** — teu(s)","• **son/sa/ses** — dele OU dela","• **notre/nos** · **votre/vos** · **leur/leurs**","⚠️ Antes de vogal, fem. vira masc.: *mon amie* (não \"ma amie\")."] },
-      { secao: "Profissões", titulo: "Sem artigo!",
-        conteudo: ["Com **être**, NÃO se usa artigo:","*Je suis médecin.* — Sou médico.","*Elle est professeur.*","Mas com **c'est**, usa-se artigo: *C'est un médecin.*"] },
-      { secao: "Adjetivos", titulo: "Masculino → Feminino",
-        conteudo: ["Regra geral: acrescenta-se **-e**:","*petit → petite · grand → grande*","Exceções:","• beau → **belle**","• vieux → **vieille**","• gentil → **gentille**","• heureux → **heureuse**"] }
-    ] },
-  { n: 4, titulo: "Cores, Adjetivos & Corpo", subtitulo: "Comparativos, demonstrativos, -IR",
-    pontos: [
-      { secao: "Comparativos", titulo: "plus, moins, aussi … que",
-        conteudo: ["• **plus + adj + que** = mais … que","• **moins + adj + que** = menos … que","• **aussi + adj + que** = tão … como","Irregulares: *bon → meilleur*, *bien → mieux*.","**Superlativo**: *le/la plus + adj*: *C'est le plus beau musée.*"] },
-      { secao: "Demonstrativos", titulo: "ce, cet, cette, ces",
-        conteudo: ["• **ce** + masc.: *ce livre*","• **cet** + masc. + vogal: *cet hôtel*","• **cette** + fem.: *cette maison*","• **ces** + plural: *ces enfants*","Distância: **-ci** (perto) ou **-là** (longe): *ce livre-**ci** / ce livre-**là***"] },
-      { secao: "Verbos -IR (2º grupo)", titulo: "finir, choisir",
-        conteudo: ["• je finis · tu finis · il finit","• nous fin**iss**ons · vous fin**iss**ez · ils fin**iss**ent","Outros: *choisir, réussir, grandir*.","⚠️ Insere-se **-iss-** nas pessoas do plural."] }
-    ] },
-  { n: 5, titulo: "Tempo, Movimento & Passado", subtitulo: "Aller, futur proche, passé composé, imparfait",
-    pontos: [
-      { secao: "ALLER", titulo: "Ir (irregular)",
-        conteudo: ["• je vais · tu vas · il va","• nous allons · vous allez · ils vont","Preposições: *aller **à** Paris · **en** France · **au** Brésil · **chez** Pierre.*"] },
-      { secao: "Futur proche", titulo: "aller + infinitivo",
-        conteudo: ["Para o futuro próximo (= \"vou fazer\"):","*Je **vais manger**.* — Vou comer.","*Nous **allons partir**.* — Vamos partir.","Fórmula: **aller (presente) + infinitivo**."] },
-      { secao: "Passé composé", titulo: "Passado mais usado",
-        conteudo: ["**Fórmula:** avoir/être (pres.) + particípio.","• -ER → **-é** (parlé)","• -IR → **-i** (fini)","• -RE → **-u** (vendu)","Irregulares: été, eu, fait, vu, pris, mis, dit.","*J'ai mangé. · Tu as fini.*"] },
-      { secao: "Passé composé com ÊTRE", titulo: "Verbos de movimento",
-        conteudo: ["Usam **être**: aller, venir, arriver, partir, entrer, sortir, monter, descendre, naître, mourir, rester, tomber + pronominais.","⚠️ Particípio **concorda** com o sujeito:","• *Il est all**é**.* · *Elle est all**ée**.*","• *Ils sont all**és**.* · *Elles sont all**ées**.*"] },
-      { secao: "Imparfait", titulo: "Pretérito imperfeito",
-        conteudo: ["= eu falava, morava (descrição, hábito).","**Formação:** raiz do *nous* presente + -ais, -ais, -ait, -ions, -iez, -aient.","*nous parl**ons** → je parl**ais***","Exceção: *être → j'étais*.","*Quand j'étais petit, je jouais au foot.*"] }
-    ] },
-  { n: 6, titulo: "Pronomes & COD/COI", subtitulo: "COD, COI, EN, Y, tônicos, pronominais",
-    pontos: [
-      { secao: "COD", titulo: "Pronome complemento direto",
-        conteudo: ["Substitui complemento **sem** preposição:","• me, te, **le, la**, nous, vous, **les**","• *Tu vois Marie? → Oui, je **la** vois.*","• *Tu manges les fruits? → Je **les** mange.*","Posição: **antes** do verbo."] },
-      { secao: "COI", titulo: "Pronome complemento indireto",
-        conteudo: ["Substitui **à + pessoa**:","• me, te, **lui**, nous, vous, **leur**","• *Je parle à Pierre → Je **lui** parle.*","• *J'écris à mes amis → Je **leur** écris.*","Verbos com COI: *parler à, dire à, donner à, écrire à, téléphoner à*."] },
-      { secao: "EN", titulo: "Pronome EN",
-        conteudo: ["Substitui:","• Partitivos: *Tu veux du café? → J'**en** veux.*","• Quantidades: *J'ai trois chats → J'**en** ai trois.*","• Lugar (de): *Je viens de Paris → J'**en** viens.*"] },
-      { secao: "Y", titulo: "Pronome Y",
-        conteudo: ["Substitui:","• **Lugar** (à, en, dans…): *Je vais à Paris → J'**y** vais.*","• **à + coisa**: *Je pense à mes vacances → J'**y** pense.*","⚠️ Para pessoa, usa-se tônico: *Je pense à Marie → Je pense à **elle**.*"] },
-      { secao: "Pronominais", titulo: "se laver, se lever",
-        conteudo: ["Verbos reflexivos:","• je me lave · tu te laves · il se lave","• nous nous lavons · vous vous lavez · ils se lavent","*se lever, se laver, s'habiller, s'appeler, se coucher*.","⚠️ Passé composé com **être** + concorda: *Elle s'est lev**ée**.*"] }
-    ] },
-  { n: 7, titulo: "Condicional & Subjuntivo", subtitulo: "Futur simple, conditionnel, subjonctif, hipóteses",
-    pontos: [
-      { secao: "Futur simple", titulo: "Futuro simples",
-        conteudo: ["**Infinitivo + -ai, -as, -a, -ons, -ez, -ont.**","• je parlerai · tu parleras · il parlera","Raízes irregulares: *être→ser-, avoir→aur-, aller→ir-, faire→fer-, pouvoir→pourr-, vouloir→voudr-, voir→verr-, venir→viendr-, savoir→saur-, devoir→devr-.*"] },
-      { secao: "Conditionnel", titulo: "Condicional presente",
-        conteudo: ["= falaria, iria…","**Raiz do futur + terminações do imparfait** (-ais, -ais, -ait, -ions, -iez, -aient).","Usos: pedidos educados (*Je voudrais…*), conselhos (*Tu devrais…*), hipóteses.","**Conditionnel passé**: *J'aurais aimé venir* = teria gostado."] },
-      { secao: "Hipóteses com SI", titulo: "3 tipos",
-        conteudo: ["**1. Possível:** si + présent → présent/futur","*Si tu viens, on ira au ciné.*","**2. Irreal presente:** si + imparfait → conditionnel","*Si j'étais riche, j'achèterais un château.*","**3. Irreal passado:** si + plus-que-parfait → conditionnel passé","*Si j'avais su, je ne serais pas venu.*","⚠️ Nunca futur/conditionnel depois de **si**!"] },
-      { secao: "Subjonctif", titulo: "Modo do subjuntivo",
-        conteudo: ["Sentimento, dúvida, vontade. Sempre após **que**.","**Raiz da 3ª pessoa plural + -e, -es, -e, -ions, -iez, -ent.**","*ils parl**ent** → que je parl**e***","Após: *il faut que, je veux que, bien que, pour que, avant que*.","Irregulares: *sois, aie, aille, fasse, puisse, sache.*"] }
-    ] },
-  { n: 8, titulo: "Discurso avançado", subtitulo: "Indireto, relativos, voz passiva, gérondif",
-    pontos: [
-      { secao: "Discurso indireto", titulo: "Mudanças de tempo",
-        conteudo: ["Verbo introdutor no **passado** muda os tempos:","• **présent → imparfait**","• **passé composé → plus-que-parfait**","• **futur → conditionnel**","*Il a dit: \"Je viens.\" → Il a dit qu'il **venait**.*"] },
-      { secao: "Pronomes relativos", titulo: "qui, que, dont, où",
-        conteudo: ["• **qui** — sujeito: *L'homme qui parle.*","• **que** — COD: *Le livre que je lis.*","• **dont** — com *de*: *Le livre dont je parle.*","• **où** — lugar/tempo: *La ville où je vis.*","Compostos: **lequel, laquelle…** após preposições."] },
-      { secao: "Voix passive", titulo: "Voz passiva",
-        conteudo: ["Sujeito + **être** + particípio (concorda).","Ativo: *Le chef prépare le repas.*","Passivo: *Le repas est préparé par le chef.*","Concordância: *La porte est ferm**ée**.*"] },
-      { secao: "Gérondif", titulo: "en + particípio presente",
-        conteudo: ["**Participe présent**: raiz do *nous* + -ant.","*parlons → parlant*","**Gérondif**: **en** + part. presente → simultaneidade:","*Il chante **en travaillant**.* — Canta enquanto trabalha.","Exceções: *étant, ayant, sachant*."] }
+      { secao: "Discurso indireto (Leçon 43)", titulo: "Leçon 43A — Le discours indirect",
+        conteudo: [
+          "Discurso indireto no presente: verbo introdutor + **que** + frase.",
+          "*Il dit: «Je suis fatigué.» → Il dit **qu'**il est fatigué.*",
+          "Pergunta indireta com **si** (= se): *Il demande si tu viens.*",
+          "**que/qu'est-ce que** → **ce que**: *Il demande **ce que** tu fais.*"
+        ] },
+      { secao: "Discurso indireto (Leçon 43)", titulo: "Leçon 43B — Le discours indirect passé",
+        conteudo: [
+          "Verbo introdutor no **passado** muda os tempos:",
+          "• **présent → imparfait**",
+          "• **passé composé → plus-que-parfait**",
+          "• **futur → conditionnel**",
+          "*Il a dit: \"Je viens.\" → Il a dit qu'il **venait**.*",
+          "*Elle a dit: \"J'ai fini.\" → Elle a dit qu'elle **avait fini**.*"
+        ] },
+      { secao: "Pronomes EN/Y (Leçons 44-45)", titulo: "Leçon 44 — Le pronom EN",
+        conteudo: [
+          "**EN** substitui:",
+          "• Complemento com **de**: *Je parle **de mes vacances** → J'**en** parle.*",
+          "• **Partitivos** (du, de la, des): *Tu manges du pain? → Oui, j'**en** mange.*",
+          "• **Quantidades**: *J'ai trois chats → J'**en** ai trois.* (mantém o número)",
+          "• **Lugar de origem**: *Je viens de Paris → J'**en** viens.*"
+        ] },
+      { secao: "Pronomes EN/Y (Leçons 44-45)", titulo: "Leçon 45 — Le pronom Y",
+        conteudo: [
+          "**Y** substitui:",
+          "• **Lugar** (à, en, dans, chez, sur…): *Je vais **à Paris** → J'**y** vais.*",
+          "• **à + coisa** (não pessoa): *Je pense **à mes examens** → J'**y** pense.*",
+          "⚠️ Para pessoa, NÃO se usa Y — usa-se tônico: *Je pense à Marie → Je pense **à elle**.*"
+        ] },
+      { secao: "Possessivos & relativos compostos (Leçons 46-47)", titulo: "Leçon 46 — Pronoms possessifs",
+        conteudo: [
+          "Substituem nome + possessivo. Levam artigo!",
+          "• meu(s): **le mien / la mienne / les miens / les miennes**",
+          "• teu(s): **le tien / la tienne / les tiens / les tiennes**",
+          "• dele(s): **le sien / la sienne / les siens / les siennes**",
+          "• nosso(s): **le/la nôtre · les nôtres**",
+          "• vosso(s): **le/la vôtre · les vôtres**",
+          "• deles: **le/la leur · les leurs**"
+        ] },
+      { secao: "Possessivos & relativos compostos (Leçons 46-47)", titulo: "Leçon 47 — Pronoms relatifs composés",
+        conteudo: [
+          "Usam-se após preposições:",
+          "• masc. sing.: **lequel** (à+lequel=**auquel** · de+lequel=**duquel**)",
+          "• fem. sing.: **laquelle** (à laquelle, de laquelle)",
+          "• plural: **lesquels / lesquelles** (auxquels, desquels…)",
+          "*Le projet **auquel** je pense.* · *La maison **dans laquelle** j'habite.*",
+          "Para pessoas: pode-se usar **qui**: *la fille avec qui je sors*."
+        ] },
+      { secao: "Generalizar & futur antérieur (Leçon 48)", titulo: "Leçon 48A — Généraliser",
+        conteudo: [
+          "Usar **on** = a gente / pessoas em geral: *On dit que… · On parle français au Québec.*",
+          "Outros: *quelqu'un* (alguém), *tout le monde* (toda a gente), *personne ne* (ninguém), *certains* (alguns)."
+        ] },
+      { secao: "Generalizar & futur antérieur (Leçon 48)", titulo: "Leçon 48B — Le futur antérieur",
+        conteudo: [
+          "Ação no futuro terminada **antes** de outra.",
+          "**Fórmula:** avoir/être (futur simple) + particípio.",
+          "*Quand tu **arriveras**, j'**aurai fini**.* = Quando chegares, já terei acabado."
+        ] },
+      { secao: "Subjonctif (Leçons 49-50)", titulo: "Leçon 49 — Le subjonctif présent",
+        conteudo: [
+          "Exprime sentimento, dúvida, vontade. Sempre após **que**.",
+          "**Formação:** raiz da 3ª pessoa plural (ils) + -e, -es, -e, -ions, -iez, -ent.",
+          "*ils parl**ent** → que je parl**e***",
+          "Usado após: *il faut que, je veux que, je suis content que, bien que, pour que, avant que, jusqu'à ce que*."
+        ] },
+      { secao: "Subjonctif (Leçons 49-50)", titulo: "Leçon 50 — Le subjonctif — Exceptions",
+        conteudo: [
+          "Verbos com formas irregulares:",
+          "• être → *que je **sois***",
+          "• avoir → *que j'**aie***",
+          "• aller → *que j'**aille***",
+          "• faire → *que je **fasse***",
+          "• pouvoir → *que je **puisse***",
+          "• savoir → *que je **sache***",
+          "• vouloir → *que je **veuille***",
+          "• il faut → *qu'il **faille***"
+        ] },
+      { secao: "Relativos & passé simple (Leçons 51-52)", titulo: "Leçon 51 — Pronoms relatifs (qui, que, dont, où)",
+        conteudo: [
+          "• **qui** — sujeito: *L'homme **qui** parle.*",
+          "• **que** — COD: *Le livre **que** je lis.*",
+          "• **dont** — complemento com **de**: *Le livre **dont** je parle.*",
+          "• **où** — lugar/tempo: *La ville **où** je vis. · Le jour **où** je suis né.*",
+          "⚠️ \"que\" elide-se antes de vogal (qu'); \"qui\" nunca elide."
+        ] },
+      { secao: "Relativos & passé simple (Leçons 51-52)", titulo: "Leçon 52 — Le passé simple",
+        conteudo: [
+          "Passado **literário** (livros, contos). Não usado na conversa — equivale ao passé composé.",
+          "**Formação:**",
+          "• -ER: parl**ai/as/a/âmes/âtes/èrent**",
+          "• -IR/-RE: fin**is/is/it/îmes/îtes/irent**",
+          "**Irregulares comuns** (3ª pessoa):",
+          "• être → *il **fut**, ils **furent***",
+          "• avoir → *il **eut**, ils **eurent***",
+          "• faire → *il **fit**, ils **firent***",
+          "• venir → *il **vint**, ils **vinrent***"
+        ] }
     ] }
 ];
 
@@ -775,31 +1112,57 @@ const FONETICA = {
 
 // ==================== HELPERS ====================
 function traduzirNumero(n) {
-  if (n < 0 || n > 99) return null;
+  if (n < 0 || n > 9999) return null;
   if (n === 0) return "zéro";
-  const u = ["", "un", "deux", "trois", "quatre", "cinq", "six", "sept", "huit", "neuf"];
-  const t10 = ["dix", "onze", "douze", "treize", "quatorze", "quinze", "seize", "dix-sept", "dix-huit", "dix-neuf"];
-  const t = ["", "", "vingt", "trente", "quarante", "cinquante", "soixante"];
-  if (n < 10) return u[n];
-  if (n < 20) return t10[n - 10];
-  if (n < 70) {
-    const d = Math.floor(n / 10), un = n % 10;
-    if (un === 0) return t[d];
-    if (un === 1) return t[d] + " et un";
-    return t[d] + "-" + u[un];
-  }
-  if (n < 80) {
-    const rest = n - 60;
-    if (rest === 11) return "soixante et onze";
-    return "soixante-" + t10[rest - 10];
-  }
-  if (n < 100) {
-    const rest = n - 80;
+  function souscent(x) {
+    // 1..99
+    const u = ["", "un", "deux", "trois", "quatre", "cinq", "six", "sept", "huit", "neuf"];
+    const t10 = ["dix", "onze", "douze", "treize", "quatorze", "quinze", "seize", "dix-sept", "dix-huit", "dix-neuf"];
+    const t = ["", "", "vingt", "trente", "quarante", "cinquante", "soixante"];
+    if (x < 10) return u[x];
+    if (x < 20) return t10[x - 10];
+    if (x < 70) {
+      const d = Math.floor(x / 10), un = x % 10;
+      if (un === 0) return t[d];
+      if (un === 1) return t[d] + " et un";
+      return t[d] + "-" + u[un];
+    }
+    if (x < 80) {
+      const rest = x - 60;
+      if (rest === 11) return "soixante et onze";
+      if (rest === 10) return "soixante-dix";
+      return "soixante-" + t10[rest - 10];
+    }
+    // 80..99
+    const rest = x - 80;
     if (rest === 0) return "quatre-vingts";
     if (rest < 10) return "quatre-vingt-" + u[rest];
     return "quatre-vingt-" + t10[rest - 10];
   }
-  return "cent";
+  function centaines(x, ehFinal) {
+    // 1..999 -> string. ehFinal = true se for o último bloco da frase (afeta plural de cent)
+    if (x === 0) return "";
+    if (x < 100) return souscent(x);
+    const c = Math.floor(x / 100), r = x % 100;
+    if (c === 1) {
+      if (r === 0) return "cent";
+      return "cent " + souscent(r);
+    }
+    const u = ["", "un", "deux", "trois", "quatre", "cinq", "six", "sept", "huit", "neuf"];
+    if (r === 0) return u[c] + (ehFinal ? " cents" : " cent");
+    return u[c] + " cent " + souscent(r);
+  }
+  if (n < 1000) return centaines(n, true);
+  // 1000..9999
+  const milhares = Math.floor(n / 1000), resto = n % 1000;
+  let pref;
+  if (milhares === 1) pref = "mille";
+  else {
+    const u = ["", "un", "deux", "trois", "quatre", "cinq", "six", "sept", "huit", "neuf"];
+    pref = u[milhares] + " mille";
+  }
+  if (resto === 0) return pref;
+  return pref + " " + centaines(resto, true);
 }
 
 const shuffle = (arr) => [...arr].sort(() => Math.random() - 0.5);
@@ -828,6 +1191,94 @@ function dicaInteligente(target) {
     texto: 'Começa por "' + first + '" · ' + word.length + ' letras',
     palavra: masked
   };
+}
+
+// ==================== IMAGENS PARA O JOGO "ADIVINHAR PELA IMAGEM" ====================
+// Mapeia cada palavra francesa para uma chave de pesquisa (em inglês, para melhores resultados).
+// Usado pelo TreinoEmoji para mostrar fotos reais de Flickr (sem necessidade de API key).
+const IMG_KEYS = {
+  // Comida
+  "le pain": "bread,bakery", "le fromage": "cheese", "le beurre": "butter",
+  "l'œuf": "egg", "le lait": "milk", "le café": "coffee,cup",
+  "le thé": "tea,cup", "l'eau": "water,glass", "le vin": "wine,glass",
+  "la bière": "beer,glass", "la viande": "meat,steak", "le poisson": "fish,raw",
+  "le poulet": "chicken,cooked", "les légumes": "vegetables", "les fruits": "fruits,basket",
+  "la pomme": "apple,red", "la banane": "banana", "l'orange": "orange,fruit",
+  "la pizza": "pizza", "la salade": "salad,green", "le riz": "rice,plate",
+  "les pâtes": "pasta", "le sucre": "sugar,cubes", "le sel": "salt,shaker",
+  "le croissant": "croissant", "le chocolat": "chocolate,bar",
+  "la soupe": "soup,bowl", "le gâteau": "cake,slice",
+  // Casa
+  "la maison": "house,exterior", "l'appartement": "apartment,building",
+  "la chambre": "bedroom", "la cuisine": "kitchen",
+  "la salle de bain": "bathroom", "le salon": "living-room",
+  "la porte": "door,wooden", "la fenêtre": "window",
+  "le lit": "bed,bedroom", "la table": "table,wood",
+  "la chaise": "chair", "le canapé": "couch,sofa",
+  "le miroir": "mirror", "le jardin": "garden,green",
+  "l'escalier": "stairs", "le frigo": "fridge,refrigerator",
+  // Cidade
+  "la ville": "city,skyline", "la rue": "street,paris",
+  "l'avenue": "avenue,paris", "la place": "square,plaza",
+  "le restaurant": "restaurant", "la boulangerie": "bakery,french",
+  "la pharmacie": "pharmacy,green-cross", "la banque": "bank,building",
+  "l'hôtel": "hotel,lobby", "le supermarché": "supermarket",
+  "le marché": "market,vegetables", "l'école": "school,classroom",
+  "l'hôpital": "hospital,building", "le musée": "museum,louvre",
+  "l'église": "church,gothic", "la gare": "train-station",
+  "le parc": "park,trees", "la bibliothèque": "library,books",
+  // Família/Pessoas
+  "la mère": "mother,smile", "le père": "father,man",
+  "les parents": "parents,family", "le fils": "boy,son",
+  "la fille": "girl,daughter", "le frère": "brothers",
+  "la sœur": "sisters", "le grand-père": "grandfather,elderly-man",
+  "la grand-mère": "grandmother,elderly-woman", "l'oncle": "uncle",
+  "la tante": "aunt", "le cousin": "cousin", "la cousine": "cousin",
+  "le mari": "groom,husband", "la femme": "bride,woman",
+  "l'enfant": "child,kid", "le bébé": "baby",
+  "l'ami": "friends,guys", "l'amie": "friends,women",
+  // Corpo
+  "la tête": "head,human", "les cheveux": "hair,human",
+  "l'œil": "eye,closeup", "les yeux": "eyes,closeup",
+  "le nez": "nose,closeup", "la bouche": "mouth,smile",
+  "les dents": "teeth,smile", "l'oreille": "ear,closeup",
+  "le bras": "arm,strong", "la main": "hand,fingers",
+  "le doigt": "finger,pointing", "le ventre": "belly",
+  "la jambe": "leg", "le pied": "foot,barefoot",
+  "le cœur": "heart,red-heart", "le visage": "face,portrait",
+  // Transporte
+  "la voiture": "car", "le vélo": "bicycle",
+  "le bus": "bus,city", "le métro": "metro,paris",
+  "le train": "train,railway", "l'avion": "airplane,sky",
+  "le bateau": "boat,sea", "le taxi": "taxi,yellow",
+  "la moto": "motorcycle",
+  // Animais
+  "le chien": "dog", "le chat": "cat",
+  "le cheval": "horse", "la vache": "cow",
+  "le mouton": "sheep", "le cochon": "pig",
+  "la poule": "chicken,hen", "l'oiseau": "bird",
+  "le lapin": "rabbit", "la souris": "mouse,rodent",
+  // Profissões
+  "le professeur": "teacher,classroom", "l'étudiant": "student,book",
+  "le médecin": "doctor,white-coat", "l'avocat": "lawyer,court",
+  "l'ingénieur": "engineer,helmet", "l'architecte": "architect,blueprint",
+  "le journaliste": "journalist,microphone", "le boulanger": "baker,bread",
+  "le chef": "chef,kitchen", "le serveur": "waiter,restaurant",
+  "le chauffeur": "driver,taxi", "le musicien": "musician,guitar",
+  "l'artiste": "artist,paint", "l'infirmier": "nurse,hospital",
+  // Tempo
+  "le soleil": "sun,sky", "la pluie": "rain",
+  "la neige": "snow", "le vent": "wind,trees",
+  "le nuage": "clouds,sky"
+};
+
+function imgUrl(fr, width, height) {
+  const key = IMG_KEYS[fr];
+  if (!key) return null;
+  const w = width || 320, h = height || 240;
+  // lock = comprimento da palavra (consistente, mas pode mudar entre palavras parecidas)
+  const lock = Math.max(1, (fr.length * 7 + key.length * 3) % 1000);
+  return 'https://loremflickr.com/' + w + '/' + h + '/' + encodeURIComponent(key) + '?lock=' + lock;
 }
 
 window.__FR_DATA__ = { VOCAB, ALL_VOCAB, vocabUpToAula, VERBOS, CONJ_IRREG, conjugar, FRASES, MUSICAS, LETRAS, AULAS, FONETICA, traduzirNumero, shuffle, useNoRepeat, dicaInteligente, speak, SpeakBtn };
@@ -1080,6 +1531,8 @@ const STYLES = `
 
 .fr-treino-card { background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 2rem 1.5rem; box-shadow: var(--shadow-lift); text-align: center; }
 .fr-treino-emoji-big { font-size: 5rem; margin-bottom: 1rem; }
+.fr-treino-img-wrap { display: flex; justify-content: center; margin-bottom: 1rem; }
+.fr-treino-img { max-width: 100%; width: 360px; height: 280px; object-fit: cover; border-radius: 12px; box-shadow: 0 4px 14px -4px rgba(0,0,0,0.2); border: 3px solid var(--paper); background: linear-gradient(135deg, var(--line-soft), var(--bg-deep)); }
 .fr-treino-question { font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.5rem; color: var(--accent-deep); margin: 0 0 0.4rem; }
 .fr-treino-pt-hint { color: var(--ink-soft); font-style: italic; font-size: 0.95rem; margin: 0 0 1.5rem; }
 .fr-hint-btn { background: rgba(200,156,79,0.12); border: 1px dashed var(--gold); color: var(--ink-soft); margin-bottom: 1rem; }
@@ -1095,9 +1548,16 @@ const STYLES = `
 .fr-treino-actions { display: flex; gap: 0.5rem; justify-content: center; margin-top: 1.25rem; flex-wrap: wrap; }
 
 .fr-match-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-top: 1rem; }
+.fr-match-flat { display: grid; grid-template-columns: 1fr 1fr; gap: 0.55rem; margin-top: 1rem; }
+@media (min-width: 700px) { .fr-match-flat { grid-template-columns: repeat(4, 1fr); } }
 .fr-match-col-head { font-family: 'Fraunces', serif; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--mute); text-align: center; padding-bottom: 0.4rem; }
-.fr-match-cell { min-height: 64px; padding: 0.85rem; border: 2px solid var(--line); border-radius: 6px; background: var(--paper); cursor: pointer; font-family: inherit; font-size: 0.92rem; transition: all 0.15s; color: var(--ink); display: flex; align-items: center; justify-content: center; gap: 0.5rem; line-height: 1.25; text-align: center; }
+.fr-match-cell { min-height: 72px; padding: 1.1rem 0.85rem 0.85rem; border: 2px solid var(--line); border-radius: 6px; background: var(--paper); cursor: pointer; font-family: inherit; font-size: 0.92rem; transition: all 0.15s; color: var(--ink); display: flex; align-items: center; justify-content: center; gap: 0.5rem; line-height: 1.25; text-align: center; position: relative; }
 .fr-match-cell.fr { font-family: 'Fraunces', serif; font-weight: 600; color: var(--accent-deep); }
+.fr-match-cell.pt { background: rgba(239,65,53,0.04); border-color: var(--line); }
+.fr-match-kind-tag { position: absolute; top: 0.3rem; left: 0.4rem; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--mute); padding: 0.1rem 0.35rem; border-radius: 3px; background: var(--bg); }
+.fr-match-cell.fr .fr-match-kind-tag { color: var(--accent); }
+.fr-match-cell.pt .fr-match-kind-tag { color: var(--rouge); }
+.fr-match-cell.matched .fr-match-kind-tag { color: var(--correct); }
 .fr-match-emoji { flex-shrink: 0; font-size: 1.3rem; }
 .fr-match-cell:hover:not(.matched):not(.selected) { border-color: var(--accent); }
 .fr-match-cell.selected { border-color: var(--accent); background: rgba(0,85,164,0.1); }
@@ -1278,11 +1738,11 @@ function LevelPrompt({ currentLevel, onSave, onClose }) {
         <button className="fr-modal-close" onClick={onClose} title="Fechar (ESC)" aria-label="Fechar">×</button>
         <div className="fr-modal-orn">◆ ◇ ◆</div>
         <h2 className="fr-modal-title">Até onde chegaste?</h2>
-        <p className="fr-modal-sub">Escolhe a última aula que já estudaste.<br/>Só vais ver conteúdo até esse ponto (podes desbloquear depois).</p>
+        <p className="fr-modal-sub">Escolhe o módulo em que estás.<br/>Só vais ver conteúdo até esse ponto (podes desbloquear depois).</p>
         <div className="fr-level-grid">
           {AULAS.map((a) => (
             <button key={a.n} className={`fr-level-option ${selected === a.n ? 'active' : ''}`} onClick={() => setSelected(a.n)}>
-              <div className="fr-level-num">Aula {a.n}</div>
+              <div className="fr-level-num">Module {a.n + 1}</div>
               <div className="fr-level-titulo">{a.titulo}</div>
               <div className="fr-level-sub">{a.subtitulo}</div>
             </button>
@@ -1290,7 +1750,7 @@ function LevelPrompt({ currentLevel, onSave, onClose }) {
         </div>
         <div style={{marginTop:'1.25rem',display:'flex',gap:'0.5rem',justifyContent:'flex-end',flexWrap:'wrap'}}>
           <button className="fr-btn" onClick={onClose}>Cancelar</button>
-          <button className="fr-btn fr-btn-primary" disabled={selected === null} onClick={() => onSave(selected)}>{selected !== null ? `Estudar até à Aula ${selected}` : 'Escolhe uma aula'}</button>
+          <button className="fr-btn fr-btn-primary" disabled={selected === null} onClick={() => onSave(selected)}>{selected !== null ? `Estudar até ao Module ${selected + 1}` : 'Escolhe um módulo'}</button>
         </div>
       </div>
     </div>
@@ -1300,7 +1760,7 @@ function LevelPrompt({ currentLevel, onSave, onClose }) {
 function Header({ view, setView }) {
   const tabs = [
     { id: 'home', label: 'Início' },
-    { id: 'aulas', label: 'Aulas' },
+    { id: 'aulas', label: 'Módulos' },
     { id: 'flashcards', label: 'Cards' },
     { id: 'treino', label: 'Treino' },
     { id: 'quiz', label: 'Quiz' },
@@ -1334,7 +1794,7 @@ function PageHeader({ title, sub, userLevel, openLevel }) {
         <h2 className="fr-page-title">{title}</h2>
         {sub && <p className="fr-page-sub">{sub}</p>}
       </div>
-      {openLevel && <button className="fr-level-pill" onClick={openLevel}>Aula {userLevel} · Mudar</button>}
+      {openLevel && <button className="fr-level-pill" onClick={openLevel}>Module {userLevel + 1} · Mudar</button>}
     </div>
   );
 }
@@ -1361,10 +1821,10 @@ function Home({ setView, progress, userName, userLevel, setUserName, openLevel, 
         <div className="fr-hero-orn">◆ ◇ ◆</div>
         <h2 className="fr-hero-title">Bonjour{userName ? `, ${userName}` : ''}!</h2>
         <p className="fr-hero-greet">{userName ? "Bem-vindo de volta ao teu estudo de francês." : "Bem-vindo ao estudo da língua francesa."}</p>
-        <p className="fr-hero-sub">A estudar até à Aula {userLevel} · {pool.length} palavras · {verbosD.length} verbos · {frasesD.length} frases</p>
+        <p className="fr-hero-sub">A estudar até ao Module {userLevel + 1} · {pool.length} palavras · {verbosD.length} verbos · {frasesD.length} frases</p>
         <div className="fr-hero-actions">
           {userName && <button className="fr-change-link" onClick={() => { const n = prompt("Novo nome:", userName); if (n && n.trim()) setUserName(n.trim()); }}>Mudar nome</button>}
-          <button className="fr-change-link" onClick={openLevel}>Mudar aula</button>
+          <button className="fr-change-link" onClick={openLevel}>Mudar módulo</button>
         </div>
       </section>
       <section className="fr-stats">
@@ -1380,8 +1840,8 @@ function Home({ setView, progress, userName, userLevel, setUserName, openLevel, 
           {last && <div className="fr-stat-pct">Último: {last.score}/{last.total}</div>}
         </div>
         <div className="fr-stat">
-          <div className="fr-stat-value">Aula {userLevel}</div>
-          <div className="fr-stat-label">Última aula concluída</div>
+          <div className="fr-stat-value">Module {userLevel + 1}</div>
+          <div className="fr-stat-label">Módulo atual</div>
           <button className="fr-change-link" style={{marginTop:'0.4rem'}} onClick={openLevel}>Atualizar</button>
         </div>
       </section>
@@ -1392,7 +1852,7 @@ function Home({ setView, progress, userName, userLevel, setUserName, openLevel, 
           <QuickCard label="Treino diário" desc="5 mini-jogos com vocabulário, escrita e números." onClick={() => setView('treino')} />
           <QuickCard label="Flashcards" desc="Vira o cartão. Pronúncia com 🔊." onClick={() => setView('flashcards')} />
           <QuickCard label="Quiz" desc="10 perguntas. Vê quanto sabes." onClick={() => setView('quiz')} />
-          <QuickCard label="Ver as aulas" desc="Conteúdo expandido de cada aula." onClick={() => setView('aulas')} />
+          <QuickCard label="Ver os módulos" desc="Conteúdo expandido dos 4 módulos da apostila." onClick={() => setView('aulas')} />
           <QuickCard label="Verbos" desc="Presente, passado, imparfait e futuro." onClick={() => setView('verbos')} />
           <QuickCard label="Música" desc="Canções francesas com letra traduzida." onClick={() => setView('musica')} />
           <QuickCard label="Frases" desc="Frases temáticas (apresentação, viagem, restaurante…)." onClick={() => setView('frases')} />
@@ -1401,17 +1861,17 @@ function Home({ setView, progress, userName, userLevel, setUserName, openLevel, 
         </div>
       </section>
       <section className="fr-quick">
-        <h3 className="fr-section-title">As tuas aulas</h3>
+        <h3 className="fr-section-title">Os teus módulos</h3>
         <div className="fr-aulas-mini">
           {AULAS.filter(a => a.n <= userLevel).map(a => (
             <button key={a.n} className="fr-aula-mini" onClick={() => setSelectedAulaN(a.n)}>
-              <span className="fr-aula-num">{a.n}</span>
+              <span className="fr-aula-num">{a.n + 1}</span>
               <span className="fr-aula-titulo">{a.titulo}</span>
               <span className="fr-aula-sub">{a.subtitulo}</span>
             </button>
           ))}
         </div>
-        {userLevel < 8 && <p style={{color:'var(--mute)',fontSize:'0.85rem',marginTop:'1rem',fontStyle:'italic'}}>Há mais {8 - userLevel} aula{8-userLevel===1?'':'s'} para descobrir. Atualiza o nível em "Mudar aula" quando estiveres pronto.</p>}
+        {userLevel < 3 && <p style={{color:'var(--mute)',fontSize:'0.85rem',marginTop:'1rem',fontStyle:'italic'}}>Há mais {3 - userLevel} módulo{3-userLevel===1?'':'s'} para descobrir. Atualiza em "Mudar módulo" quando estiveres pronto.</p>}
       </section>
     </div>
   );
@@ -1455,13 +1915,13 @@ function IdadeTradutor() {
 function AulasList({ userLevel, setSelectedAulaN, openLevel }) {
   return (
     <div>
-      <PageHeader title="As aulas" sub="Programa em 9 aulas, baseado na apostila PFV — clica para abrir." userLevel={userLevel} openLevel={openLevel} />
+      <PageHeader title="Os 4 módulos" sub="Conteúdo organizado pelos módulos da apostila PFV — clica para abrir." userLevel={userLevel} openLevel={openLevel} />
       <div className="fr-aulas-grid">
         {AULAS.map(a => {
           const locked = a.n > userLevel;
           return (
             <button key={a.n} className={`fr-aula-card ${locked?'fr-locked':''}`} onClick={() => setSelectedAulaN(a.n)}>
-              <div className="fr-aula-card-num">Aula {a.n}{locked && ' · 🔒'}</div>
+              <div className="fr-aula-card-num">Module {a.n + 1}{locked && ' · 🔒'}</div>
               <h3 className="fr-aula-card-titulo">{a.titulo}</h3>
               <p className="fr-aula-card-sub">{a.subtitulo}</p>
               <div className="fr-aula-card-meta">{a.pontos.length} tópicos</div>
@@ -1485,7 +1945,7 @@ function AulaDetail({ aula, back, userLevel, isLocked, setSelectedAulaN, openLev
       <button className="fr-back" onClick={back}>← Voltar às aulas</button>
       <div className="fr-page-header">
         <div className="fr-page-header-info">
-          <div className="fr-aula-card-num">Aula {aula.n}{isLocked && ' · 🔒 bloqueada'}</div>
+          <div className="fr-aula-card-num">Module {aula.n + 1}{isLocked && ' · 🔒 bloqueado'}</div>
           <h2 className="fr-page-title">{aula.titulo}</h2>
           <p className="fr-page-sub">{aula.subtitulo}</p>
         </div>
@@ -1520,8 +1980,8 @@ function AulaDetail({ aula, back, userLevel, isLocked, setSelectedAulaN, openLev
         ))}
       </div>
       <div className="fr-aula-foot-nav">
-        {prev && <button className="fr-btn" onClick={() => setSelectedAulaN(prev.n)}>← Aula {prev.n}: {prev.titulo}</button>}
-        {next && <button className="fr-btn fr-btn-primary" onClick={() => setSelectedAulaN(next.n)}>Aula {next.n}: {next.titulo} →</button>}
+        {prev && <button className="fr-btn" onClick={() => setSelectedAulaN(prev.n)}>← {prev.titulo}</button>}
+        {next && <button className="fr-btn fr-btn-primary" onClick={() => setSelectedAulaN(next.n)}>{next.titulo} →</button>}
       </div>
     </div>
   );
@@ -1579,7 +2039,7 @@ function Flashcards({ markCard, studied, userLevel, openLevel }) {
         <div className="fr-flash-meta">
           <span className="fr-tag">{idx + 1} / {pool.length}</span>
           <span className="fr-tag-cat">{card.categoria}</span>
-          <span className="fr-tag-cat">Aula {card.aula}</span>
+          <span className="fr-tag-cat">M{card.aula + 1}</span>
           <SpeakBtn text={speakText} />
         </div>
         <div className={`fr-flash ${flipped ? 'flipped' : ''}`} onClick={() => setFlipped(f => !f)}>
@@ -1899,8 +2359,8 @@ function TreinoEmoji({ pool, recordTreino }) {
   const [q, setQ] = useState(null);
   const [picked, setPicked] = useState(null);
   const [showHint, setShowHint] = useState(false);
-  const isVisual = v => typeof v.emoji === 'string' && !v.emoji.startsWith('txt:');
-  const visualPool = useMemo(() => pool.filter(isVisual), [pool]);
+  // Só itens com imagem real disponível (definidos em IMG_KEYS)
+  const visualPool = useMemo(() => pool.filter(v => IMG_KEYS[v.fr]), [pool]);
   const { next: nextTarget } = useNoRepeat(visualPool);
   const gerar = () => {
     if (visualPool.length < 4) return;
@@ -1912,17 +2372,28 @@ function TreinoEmoji({ pool, recordTreino }) {
     setPicked(null); setShowHint(false);
   };
   useEffect(() => { gerar(); }, []);
-  if (!q) return <div className="fr-treino-card"><p>Sem palavras visuais suficientes.</p></div>;
+  if (visualPool.length < 4) {
+    return <div className="fr-treino-card"><p>Sem palavras com imagem suficientes neste módulo. Avança para um módulo seguinte para desbloqueares mais vocabulário visual.</p></div>;
+  }
+  if (!q) return null;
   const escolher = (opt) => {
     if (picked) return;
     setPicked(opt.fr);
     recordTreino(opt.fr === q.target.fr);
     if (opt.fr === q.target.fr) speak(q.target.fr);
-    setTimeout(() => gerar(), 1600);
+    setTimeout(() => gerar(), 1700);
   };
+  const url = imgUrl(q.target.fr, 360, 280);
   return (
     <div className="fr-treino-card">
-      <div className="fr-treino-emoji-big"><EmojiOrText value={q.target.emoji} size="big" /></div>
+      <div className="fr-treino-img-wrap">
+        {url ? (
+          <img src={url} alt="" className="fr-treino-img" referrerPolicy="no-referrer"
+            onError={(e) => { e.target.style.display='none'; }} />
+        ) : (
+          <div className="fr-treino-emoji-big"><EmojiOrText value={q.target.emoji} size="big" /></div>
+        )}
+      </div>
       <p className="fr-treino-question">Que palavra é esta em francês?</p>
       {showHint ? (
         <div className="fr-treino-hint-shown">💡 {q.dica.texto}<div className="fr-dica-palavra">{q.dica.palavra}</div></div>
@@ -1976,7 +2447,7 @@ function TreinoWrite({ pool, recordTreino }) {
     <div className="fr-treino-card">
       {typeof q.emoji === 'string' && !q.emoji.startsWith('txt:') && <div className="fr-treino-emoji-big">{q.emoji}</div>}
       <p className="fr-treino-question">Como se diz "{q.pt}" em francês?</p>
-      <p className="fr-treino-pt-hint">Aula {q.aula}</p>
+      <p className="fr-treino-pt-hint">Module {q.aula + 1}</p>
       {showHint ? (
         <div className="fr-treino-hint-shown">💡 {q.dica.texto}<div className="fr-dica-palavra">{q.dica.palavra}</div></div>
       ) : !feedback && <button className="fr-btn fr-btn-small fr-hint-btn" onClick={() => setShowHint(true)}>💡 Dica</button>}
@@ -2049,37 +2520,61 @@ function TreinoChoice({ pool, recordTreino }) {
 }
 
 function TreinoMatch({ pool, recordTreino }) {
+  // Grelha 4x2 plana de 8 cartões (4 FR + 4 PT) totalmente misturados.
+  // Pares nunca estão alinhados — todos os cartões aparecem em posições aleatórias.
   const [pares, setPares] = useState([]);
-  const [colA, setColA] = useState([]);
-  const [colB, setColB] = useState([]);
-  const [selA, setSelA] = useState(null);
-  const [selB, setSelB] = useState(null);
-  const [matched, setMatched] = useState({});
-  const [wrong, setWrong] = useState(null);
+  const [cards, setCards] = useState([]); // [{id, kind:'fr'|'pt', label, paraKey}]
+  const [picked, setPicked] = useState([]); // ids selecionados (max 2)
+  const [matched, setMatched] = useState({}); // {paraKey: true}
+  const [wrong, setWrong] = useState(null); // [id1, id2]
   const { nextN } = useNoRepeat(pool);
+  const N = 4;
   const gerar = () => {
-    const escolhidos = nextN(4);
-    if (escolhidos.length < 4) return;
+    const escolhidos = nextN(N);
+    if (escolhidos.length < N) return;
     setPares(escolhidos);
-    setColA(shuffle(escolhidos.map(p => ({key: p.fr, label: p.fr, emoji: p.emoji}))));
-    setColB(shuffle(escolhidos.map(p => ({key: p.fr, label: p.pt, emoji: p.emoji}))));
-    setSelA(null); setSelB(null); setMatched({}); setWrong(null);
+    const all = [];
+    escolhidos.forEach((p, i) => {
+      all.push({ id: 'fr-' + i + '-' + Math.random().toString(36).slice(2,7), kind: 'fr', label: p.fr, paraKey: p.fr });
+      all.push({ id: 'pt-' + i + '-' + Math.random().toString(36).slice(2,7), kind: 'pt', label: p.pt, paraKey: p.fr });
+    });
+    // Embaralhar várias vezes para garantir mistura visual completa
+    let mixed = shuffle(all);
+    // Garantir que nenhum par fica em posição "óbvia" (mesma linha em grelha 2 colunas)
+    let tries = 0;
+    while (tries++ < 20) {
+      let conflito = false;
+      // Numa grelha de 2 colunas: posições 0,1 = linha 0; 2,3 = linha 1; ...
+      for (let i = 0; i < mixed.length; i += 2) {
+        if (mixed[i].paraKey === mixed[i+1].paraKey) { conflito = true; break; }
+      }
+      if (!conflito) break;
+      mixed = shuffle(all);
+    }
+    setCards(mixed);
+    setPicked([]); setMatched({}); setWrong(null);
   };
   useEffect(() => { gerar(); }, []);
-  useEffect(() => {
-    if (selA && selB) {
-      if (selA === selB) {
-        setMatched(m => ({...m, [selA]: true}));
+  const pick = (card) => {
+    if (matched[card.paraKey]) return;
+    if (picked.find(p => p.id === card.id)) return;
+    if (wrong) return;
+    const np = [...picked, card];
+    setPicked(np);
+    if (np.length === 2) {
+      if (np[0].paraKey === np[1].paraKey && np[0].kind !== np[1].kind) {
+        // Match!
+        setMatched(m => ({...m, [np[0].paraKey]: true}));
         recordTreino(true);
-        speak(selA);
-        setSelA(null); setSelB(null);
+        speak(np[0].paraKey); // FR
+        setPicked([]);
       } else {
         recordTreino(false);
-        setWrong({ a: selA, b: selB });
-        setTimeout(() => { setSelA(null); setSelB(null); setWrong(null); }, 700);
+        setWrong([np[0].id, np[1].id]);
+        setTimeout(() => { setPicked([]); setWrong(null); }, 800);
       }
     }
-  }, [selA, selB]);
+  };
   const totMatch = Object.keys(matched).length;
   const completo = totMatch === pares.length && pares.length > 0;
   useEffect(() => {
@@ -2091,25 +2586,19 @@ function TreinoMatch({ pool, recordTreino }) {
   return (
     <div className="fr-treino-card" style={{textAlign:'left'}}>
       <p style={{textAlign:'center',color:'var(--mute)',fontSize:'0.92rem',marginTop:0}}>
-        Associa cada palavra em <strong style={{color:'var(--accent)'}}>francês</strong> à sua tradução em <strong>português</strong>.
+        Clica em <strong style={{color:'var(--accent)'}}>2 cartões</strong> para formar um par <strong>francês ↔ português</strong>. Os cartões estão todos misturados.
       </p>
-      <div className="fr-match-grid">
-        <div className="fr-match-col-head">Français</div>
-        <div className="fr-match-col-head">Português</div>
-        {[0,1,2,3].map(rowIdx => {
-          const itA = colA[rowIdx], itB = colB[rowIdx];
-          if (!itA || !itB) return null;
-          const aMatched = matched[itA.key], aSelected = selA === itA.key, aWrong = wrong && wrong.a === itA.key;
-          const bMatched = matched[itB.key], bSelected = selB === itB.key, bWrong = wrong && wrong.b === itB.key;
+      <div className="fr-match-flat">
+        {cards.map(card => {
+          const isMatched = matched[card.paraKey];
+          const isPicked = picked.find(p => p.id === card.id);
+          const isWrong = wrong && wrong.includes(card.id);
+          const cls = 'fr-match-cell ' + (card.kind === 'fr' ? 'fr' : 'pt') + (isMatched?' matched':'') + (isPicked?' selected':'') + (isWrong?' wrong':'');
           return (
-            <React.Fragment key={rowIdx}>
-              <button className={`fr-match-cell fr ${aMatched?'matched':''} ${aSelected?'selected':''} ${aWrong?'wrong':''}`} disabled={aMatched} onClick={() => !aMatched && setSelA(itA.key)}>
-                <span className="fr-match-text">{itA.label}</span>
-              </button>
-              <button className={`fr-match-cell ${bMatched?'matched':''} ${bSelected?'selected':''} ${bWrong?'wrong':''}`} disabled={bMatched} onClick={() => !bMatched && setSelB(itB.key)}>
-                <span className="fr-match-text">{itB.label}</span>
-              </button>
-            </React.Fragment>
+            <button key={card.id} className={cls} disabled={isMatched} onClick={() => pick(card)}>
+              <span className="fr-match-kind-tag">{card.kind === 'fr' ? 'FR' : 'PT'}</span>
+              <span className="fr-match-text">{card.label}</span>
+            </button>
           );
         })}
       </div>
@@ -2123,8 +2612,8 @@ function TreinoMatch({ pool, recordTreino }) {
 }
 
 function TreinoNumeros({ recordTreino, userLevel }) {
-  const [mode, setMode] = useState('fr-num'); // fr-num (mostra francês → escolher número) | num-fr (mostra número → escolher francês)
-  const [range, setRange] = useState(userLevel >= 1 ? 99 : 20);
+  const [mode, setMode] = useState('fr-num');
+  const [range, setRange] = useState(99);
   const [q, setQ] = useState(null);
   const [picked, setPicked] = useState(null);
   const histRef = useRef([]);
@@ -2134,10 +2623,20 @@ function TreinoNumeros({ recordTreino, userLevel }) {
     do { n = Math.floor(Math.random() * (range + 1)); tries++; } while (histRef.current.includes(n) && tries < 30);
     histRef.current.push(n); if (histRef.current.length > 8) histRef.current.shift();
     const correctFr = traduzirNumero(n);
-    // Generate distractors
+    // Gerar distractors "próximos" para serem mais desafiantes
     const distractors = [];
-    while (distractors.length < 3) {
-      const d = Math.floor(Math.random() * (range + 1));
+    let tr = 0;
+    while (distractors.length < 3 && tr < 200) {
+      tr++;
+      let d;
+      // metade dos casos: número totalmente aleatório; outra metade: perto do número alvo
+      if (Math.random() < 0.5) {
+        d = Math.floor(Math.random() * (range + 1));
+      } else {
+        const delta = (Math.random() < 0.5 ? -1 : 1) * (1 + Math.floor(Math.random() * 11));
+        d = n + delta;
+      }
+      if (d < 0 || d > range) continue;
       if (d !== n && !distractors.includes(d)) distractors.push(d);
     }
     const options = shuffle([n, ...distractors]);
@@ -2148,8 +2647,8 @@ function TreinoNumeros({ recordTreino, userLevel }) {
   if (!q) return null;
   const escolher = (val) => {
     if (picked !== null) return;
-    const acerto = mode === 'fr-num' ? (val === q.n) : (val === q.n);
     setPicked(val);
+    const acerto = val === q.n;
     recordTreino(acerto);
     if (acerto) speak(q.correctFr);
     setTimeout(() => gerar(), 1500);
@@ -2162,8 +2661,10 @@ function TreinoNumeros({ recordTreino, userLevel }) {
           <button className={mode==='num-fr'?'active':''} onClick={() => setMode('num-fr')}>Número → FR</button>
         </div>
         <div className="fr-toggle">
-          <button className={range===20?'active':''} onClick={() => setRange(20)}>0-20</button>
-          <button className={range===99?'active':''} onClick={() => setRange(99)}>0-99</button>
+          <button className={range===20?'active':''} onClick={() => setRange(20)}>0–20</button>
+          <button className={range===99?'active':''} onClick={() => setRange(99)}>0–99</button>
+          <button className={range===999?'active':''} onClick={() => setRange(999)}>0–999</button>
+          <button className={range===9999?'active':''} onClick={() => setRange(9999)}>0–9999</button>
         </div>
       </div>
       {mode === 'fr-num' ? (
@@ -2211,46 +2712,36 @@ function TreinoNumeros({ recordTreino, userLevel }) {
 }
 
 function Musicas({ userLevel, openLevel }) {
-  const [openAula, setOpenAula] = useState(null);
+  const [openId, setOpenId] = useState(null);
   const musicasD = MUSICAS.filter(m => m.aula <= userLevel);
   return (
     <div>
-      <PageHeader title="Música francesa" sub="Clássicos e atuais. Clica numa linha para ouvir 🔊." userLevel={userLevel} openLevel={openLevel} />
-      {musicasD.length === 0 && <div className="fr-empty">Sem músicas neste nível.</div>}
+      <PageHeader title="Música francesa" sub="Clássicos e atuais. Cada música tem link para o videoclip + letra completa em Paroles.net." userLevel={userLevel} openLevel={openLevel} />
+      {musicasD.length === 0 && <div className="fr-empty">Sem músicas neste módulo.</div>}
       <div className="fr-musica-acordeao">
         {musicasD.map(m => {
-          const isOpen = openAula === m.aula;
-          const letra = LETRAS[m.aula] || [];
+          const isOpen = openId === m.id;
           return (
-            <div key={m.aula} className={`fr-musica-aula-card ${isOpen?'open':''}`}>
-              <button className="fr-musica-aula-header" onClick={() => setOpenAula(isOpen ? null : m.aula)}>
-                <div className="fr-musica-aula-num">{m.aula}</div>
+            <div key={m.id} className={`fr-musica-aula-card ${isOpen?'open':''}`}>
+              <button className="fr-musica-aula-header" onClick={() => setOpenId(isOpen ? null : m.id)}>
+                <div className="fr-musica-aula-num">M{m.aula + 1}</div>
                 <div className="fr-musica-aula-info">
-                  <div className="fr-musica-aula-titulo">{m.titulo}</div>
+                  <div className="fr-musica-aula-titulo">{m.titulo} <span style={{color:'var(--mute)',fontWeight:400,fontSize:'0.8rem'}}>({m.ano})</span></div>
                   <div className="fr-musica-aula-artista">{m.artista} · {m.tituloPt}</div>
                 </div>
                 <div className="fr-musica-aula-arrow">{isOpen ? '▲' : '▼'}</div>
               </button>
               {isOpen && (
                 <div className="fr-musica-aula-body">
+                  <p style={{color:'var(--ink-soft)',fontSize:'0.92rem',marginTop:'0.5rem'}}>{m.sobre}</p>
                   <div className="fr-musica-yt-row">
-                    <a className="fr-yt-link" href={m.yt} target="_blank" rel="noopener">▶ Procurar no YouTube</a>
-                    <button className="fr-btn fr-btn-small" onClick={() => letra.forEach((l, i) => setTimeout(() => speak(l.fr), i * 2200))}>🔊 Ler letra inteira</button>
+                    <a className="fr-yt-link" href={m.yt} target="_blank" rel="noopener">▶ Ver no YouTube</a>
+                    <a className="fr-btn fr-btn-primary" href={m.letra} target="_blank" rel="noopener" style={{textDecoration:'none'}}>📜 Letra completa (Paroles.net)</a>
+                    <button className="fr-btn" onClick={() => speak(m.titulo)}>🔊 Ouvir título</button>
                   </div>
-                  {letra.length > 0 && (
-                    <div className="fr-letra-table">
-                      <div className="fr-letra-head-spk"></div>
-                      <div className="fr-letra-head-fr">Français</div>
-                      <div className="fr-letra-head-pt">Português</div>
-                      {letra.map((l, i) => (
-                        <React.Fragment key={i}>
-                          <div><SpeakBtn text={l.fr} /></div>
-                          <div className="fr-letra-fr">{l.fr}</div>
-                          <div className="fr-letra-pt">{l.pt}</div>
-                        </React.Fragment>
-                      ))}
-                    </div>
-                  )}
+                  <div style={{padding:'0.75rem 0.95rem',background:'rgba(200,156,79,0.08)',border:'1px dashed var(--gold)',borderRadius:'6px',fontSize:'0.85rem',color:'var(--ink-soft)',lineHeight:'1.5',marginTop:'0.5rem'}}>
+                    💡 <strong>Como estudar:</strong> abre o YouTube num separador e a letra no outro. Ouve a música a seguir a letra, repete em voz alta. Identifica palavras conhecidas e marca as novas.
+                  </div>
                 </div>
               )}
             </div>
