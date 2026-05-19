@@ -14,7 +14,28 @@
 </style>
 </head>
 <body>
-<div id="root"></div>
+<div id="root">
+  <div id="fr-fallback" style="padding:2rem;font-family:system-ui;color:#1a2138;text-align:center;max-width:600px;margin:0 auto">
+    <h1 style="color:#0055A4">🇫🇷 Estudar Francês</h1>
+    <p style="color:#7e879a">A carregar… se ficar mais de 5 segundos assim, há um problema. Abre a consola do browser (F12 ou Cmd+Option+I no Mac) e mostra-me o erro em vermelho.</p>
+    <p style="color:#7e879a;font-size:0.85rem">Verifica também a tua ligação — o app usa React/Babel de CDN.</p>
+  </div>
+</div>
+<script>
+  // Mostra erros ao utilizador em vez de página branca
+  window.addEventListener('error', function(e) {
+    var fb = document.getElementById('fr-fallback');
+    if (fb) {
+      fb.innerHTML = '<h1 style="color:#c1281f">⚠️ Erro a carregar o app</h1>' +
+        '<p style="color:#1a2138">' + (e.message || 'erro desconhecido') + '</p>' +
+        '<pre style="background:#fbf8f0;padding:1rem;border-radius:8px;text-align:left;font-size:0.85rem;overflow:auto">' +
+        (e.filename ? e.filename + ':' + e.lineno + ':' + e.colno + '\n' : '') +
+        (e.error && e.error.stack ? e.error.stack : '') +
+        '</pre>' +
+        '<p style="color:#7e879a">Por favor envia este erro para podermos corrigir.</p>';
+    }
+  });
+</script>
 
 <script type="text/babel" data-presets="react">
 const { useState, useEffect, useMemo, useRef } = React;
@@ -1281,7 +1302,7 @@ function imgUrl(fr, width, height) {
   return 'https://loremflickr.com/' + w + '/' + h + '/' + encodeURIComponent(key) + '?lock=' + lock;
 }
 
-window.__FR_DATA__ = { VOCAB, ALL_VOCAB, vocabUpToAula, VERBOS, CONJ_IRREG, conjugar, FRASES, MUSICAS, LETRAS, AULAS, FONETICA, traduzirNumero, shuffle, useNoRepeat, dicaInteligente, speak, SpeakBtn };
+window.__FR_DATA__ = { VOCAB, ALL_VOCAB, vocabUpToAula, VERBOS, CONJ_IRREG, conjugar, FRASES, MUSICAS, AULAS, FONETICA, IMG_KEYS, imgUrl, traduzirNumero, shuffle, useNoRepeat, dicaInteligente, speak, SpeakBtn };
 
 // ==================== STYLES ====================
 const STYLES = `
