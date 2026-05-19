@@ -1238,15 +1238,18 @@ function traduzirNumero(n) {
 const shuffle = (arr) => [...arr].sort(() => Math.random() - 0.5);
 
 function useNoRepeat(pool, historyCap) {
-  const cap = historyCap || Math.max(3, Math.floor(pool.length / 2));
+  // Mínimo 20 (ou pool.length-1 se houver muito poucos itens) — só repete depois de 20 outros
+  const cap = historyCap || Math.max(20, Math.min(40, Math.floor(pool.length * 0.7)));
   const histRef = useRef([]);
   const next = () => {
     if (!pool.length) return null;
+    // Mantém histórico dentro do limite do pool
+    const effCap = Math.min(cap, pool.length - 1);
     const avail = pool.filter(p => !histRef.current.includes(p.fr));
     const arr = avail.length ? avail : pool;
     const pick = arr[Math.floor(Math.random() * arr.length)];
     histRef.current.push(pick.fr);
-    if (histRef.current.length > cap) histRef.current.shift();
+    if (histRef.current.length > effCap) histRef.current.shift();
     return pick;
   };
   const nextN = (n) => shuffle(pool).slice(0, n);
@@ -2555,21 +2558,31 @@ function TreinoEmoji({ pool, recordTreino }) {
   const [q, setQ] = useState(null);
   const [picked, setPicked] = useState(null);
   const [showHint, setShowHint] = useState(false);
-  // Só itens com imagem real disponível (definidos em IMG_KEYS)
-  const visualPool = useMemo(() => pool.filter(v => IMG_KEYS[v.fr]), [pool]);
-  const { next: nextTarget } = useNoRepeat(visualPool);
+  // Filtra itens com emoji visual concreto (exclui txt: e números)
+  const isVisual = (v) => {
+    if (typeof v.emoji !== 'string') return false;
+    if (v.emoji.startsWith('txt:')) return false;
+    // Exclui números 0-9, 10 e combos 20/40/etc
+    if (/^[0-9]️⃣$/.test(v.emoji)) return false;
+    if (v.emoji === '🔟') return false;
+    if (/^[0-9]️⃣[0-9]️⃣$/.test(v.emoji)) return false;
+    if (v.emoji === '💯') return false;
+    return true;
+  };
+  const visualPool = useMemo(() => pool.filter(isVisual), [pool]);
+  const { next: nextTarget } = useNoRepeat(visualPool, 20);
   const gerar = () => {
     if (visualPool.length < 4) return;
     const target = nextTarget();
     if (!target) return;
-    const distractors = shuffle(pool.filter(v => v.fr !== target.fr)).slice(0, 3);
+    const distractors = shuffle(visualPool.filter(v => v.fr !== target.fr)).slice(0, 3);
     const options = shuffle([...distractors, target]);
     setQ({ target, options, dica: dicaInteligente(target) });
     setPicked(null); setShowHint(false);
   };
   useEffect(() => { gerar(); }, []);
   if (visualPool.length < 4) {
-    return <div className="fr-treino-card"><p>Sem palavras com imagem suficientes neste módulo. Avança para um módulo seguinte para desbloqueares mais vocabulário visual.</p></div>;
+    return <div className="fr-treino-card"><p>Sem vocabulário visual suficiente neste módulo. Avança para um módulo seguinte.</p></div>;
   }
   if (!q) return null;
   const escolher = (opt) => {
@@ -2579,17 +2592,9 @@ function TreinoEmoji({ pool, recordTreino }) {
     if (opt.fr === q.target.fr) speak(q.target.fr);
     setTimeout(() => gerar(), 1700);
   };
-  const url = imgUrl(q.target.fr, 360, 280);
   return (
     <div className="fr-treino-card">
-      <div className="fr-treino-img-wrap">
-        {url ? (
-          <img src={url} alt="" className="fr-treino-img" referrerPolicy="no-referrer"
-            onError={(e) => { e.target.style.display='none'; }} />
-        ) : (
-          <div className="fr-treino-emoji-big"><EmojiOrText value={q.target.emoji} size="big" /></div>
-        )}
-      </div>
+      <div className="fr-treino-emoji-big"><EmojiOrText value={q.target.emoji} size="big" /></div>
       <p className="fr-treino-question">Que palavra é esta em francês?</p>
       {showHint ? (
         <div className="fr-treino-hint-shown">💡 {q.dica.texto}<div className="fr-dica-palavra">{q.dica.palavra}</div></div>
@@ -2599,15 +2604,15 @@ function TreinoEmoji({ pool, recordTreino }) {
           const correct = picked && opt.fr === q.target.fr;
           const wrong = picked === opt.fr && opt.fr !== q.target.fr;
           return (
-            <button key={i} className={`fr-quiz-option ${correct?'correct':''} ${wrong?'wrong':''} ${picked?'disabled':''}`} onClick={() => escolher(opt)} disabled={!!picked}>
+            <button key={i} className={'fr-quiz-option' + (correct?' correct':'') + (wrong?' wrong':'') + (picked?' disabled':'')} onClick={() => escolher(opt)} disabled={!!picked}>
               {opt.fr}
             </button>
           );
         })}
       </div>
       {picked && (
-        <div className={`fr-treino-feedback ${picked === q.target.fr ? 'correct' : 'wrong'}`}>
-          {picked === q.target.fr ? '✓ Boa!' : `✗ Era: ${q.target.fr}`}
+        <div className={'fr-treino-feedback ' + (picked === q.target.fr ? 'correct' : 'wrong')}>
+          {picked === q.target.fr ? '✓ Boa!' : '✗ Era: ' + q.target.fr}
           <SpeakBtn text={q.target.fr} />
           <small>{q.target.fr} = {q.target.pt}</small>
         </div>
@@ -2669,47 +2674,87 @@ function TreinoWrite({ pool, recordTreino }) {
 }
 
 function TreinoChoice({ pool, recordTreino }) {
-  const [q, setQ] = useState(null);
-  const [picked, setPicked] = useState(null);
+  // Stack de questões para suportar "voltar" à anterior
+  const [stack, setStack] = useState([]); // lista de {target, options, dica, picked}
+  const [idx, setIdx] = useState(-1);     // índice atual no stack
   const [showHint, setShowHint] = useState(false);
-  const { next } = useNoRepeat(pool);
-  const gerar = () => { const t = next(); if (!t) return; const distractors = shuffle(pool.filter(v => v.fr !== t.fr)).slice(0, 3); setQ({target: t, options: shuffle([...distractors, t]), dica: dicaInteligente(t)}); setPicked(null); setShowHint(false); };
-  useEffect(() => { gerar(); }, []);
-  if (!q) return null;
-  const escolher = (opt) => {
-    if (picked) return;
-    setPicked(opt.fr);
-    recordTreino(opt.fr === q.target.fr);
-    if (opt.fr === q.target.fr) speak(q.target.fr);
-    setTimeout(() => gerar(), 1600);
+  const { next } = useNoRepeat(pool, 25);
+
+  const novaQ = () => {
+    const t = next();
+    if (!t) return;
+    const distractors = shuffle(pool.filter(v => v.fr !== t.fr)).slice(0, 3);
+    return { target: t, options: shuffle([...distractors, t]), dica: dicaInteligente(t), picked: null };
   };
+  const gerar = () => {
+    const q = novaQ();
+    if (!q) return;
+    setStack(s => {
+      const ns = [...s, q];
+      if (ns.length > 30) ns.shift(); // limita histórico
+      setIdx(ns.length - 1);
+      return ns;
+    });
+    setShowHint(false);
+  };
+  useEffect(() => { gerar(); }, []);
+  const q = idx >= 0 && stack[idx] ? stack[idx] : null;
+  if (!q) return null;
+
+  const escolher = (opt) => {
+    if (q.picked) return;
+    const isCorrect = opt.fr === q.target.fr;
+    recordTreino(isCorrect);
+    if (isCorrect) speak(q.target.fr);
+    // Atualiza picked no stack
+    setStack(s => s.map((x, i) => i === idx ? {...x, picked: opt.fr} : x));
+    setTimeout(() => {
+      // Só avança automaticamente se estamos na pergunta mais recente
+      if (idx === stack.length - 1) gerar();
+    }, 1700);
+  };
+  const voltar = () => {
+    if (idx > 0) { setIdx(idx - 1); setShowHint(false); }
+  };
+  const avancar = () => {
+    if (idx < stack.length - 1) { setIdx(idx + 1); setShowHint(false); }
+    else gerar();
+  };
+  const isHistory = idx < stack.length - 1; // estamos a ver uma pergunta anterior
+
   return (
     <div className="fr-treino-card">
+      {isHistory && (
+        <div style={{padding:'0.5rem 0.75rem',background:'rgba(0,85,164,0.08)',border:'1px solid var(--accent)',borderRadius:'4px',marginBottom:'0.75rem',fontSize:'0.85rem',color:'var(--accent-deep)'}}>
+          📂 Pergunta anterior · {idx + 1} de {stack.length}
+        </div>
+      )}
       <p className="fr-treino-question" style={{marginTop:'0.5rem'}}>Como se diz "<strong>{q.target.pt}</strong>" em francês?</p>
       <p className="fr-treino-pt-hint">Escolhe a resposta correta</p>
       {showHint ? (
         <div className="fr-treino-hint-shown">💡 {q.dica.texto}<div className="fr-dica-palavra">{q.dica.palavra}</div></div>
-      ) : !picked && <button className="fr-btn fr-btn-small fr-hint-btn" onClick={() => setShowHint(true)}>💡 Dica</button>}
+      ) : !q.picked && <button className="fr-btn fr-btn-small fr-hint-btn" onClick={() => setShowHint(true)}>💡 Dica</button>}
       <div className="fr-quiz-options" style={{maxWidth:'460px',margin:'1rem auto 0'}}>
         {q.options.map((opt, i) => {
-          const correct = picked && opt.fr === q.target.fr;
-          const wrong = picked === opt.fr && opt.fr !== q.target.fr;
+          const correct = q.picked && opt.fr === q.target.fr;
+          const wrong = q.picked === opt.fr && opt.fr !== q.target.fr;
           return (
-            <button key={i} className={`fr-quiz-option ${correct?'correct':''} ${wrong?'wrong':''} ${picked?'disabled':''}`} onClick={() => escolher(opt)} disabled={!!picked}>
+            <button key={i} className={'fr-quiz-option' + (correct?' correct':'') + (wrong?' wrong':'') + (q.picked?' disabled':'')} onClick={() => escolher(opt)} disabled={!!q.picked}>
               {opt.fr}
             </button>
           );
         })}
       </div>
-      {picked && (
-        <div className={`fr-treino-feedback ${picked === q.target.fr ? 'correct' : 'wrong'}`}>
-          {picked === q.target.fr ? '✓ Boa!' : `✗ Era: ${q.target.fr}`}
+      {q.picked && (
+        <div className={'fr-treino-feedback ' + (q.picked === q.target.fr ? 'correct' : 'wrong')}>
+          {q.picked === q.target.fr ? '✓ Boa!' : '✗ Era: ' + q.target.fr}
           <SpeakBtn text={q.target.fr} />
           <small>{q.target.fr} = {q.target.pt}</small>
         </div>
       )}
       <div className="fr-treino-actions">
-        <button className="fr-btn" onClick={gerar}>{picked ? 'Próxima →' : '⏭️ Saltar'}</button>
+        <button className="fr-btn" onClick={voltar} disabled={idx <= 0}>← Anterior</button>
+        <button className="fr-btn fr-btn-primary" onClick={avancar}>{q.picked || isHistory ? (isHistory ? 'Avançar →' : 'Próxima →') : '⏭️ Saltar'}</button>
       </div>
     </div>
   );
