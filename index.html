@@ -48,51 +48,71 @@ const storage = {
 };
 
 // ==================== TTS (TEXT-TO-SPEECH) ====================
-// Garante que as vozes estejam carregadas antes de falar (Chrome/Safari async)
+// SÓ fala em francês. Se não houver voz francesa no sistema, não fala (em vez de cair na voz default = português).
+let _lastSpeak = 0;
+let _noVoiceWarned = false;
 function pickFrenchVoice() {
   if (typeof speechSynthesis === 'undefined') return null;
   const voices = speechSynthesis.getVoices();
   if (!voices.length) return null;
-  // Prioridade: vozes nativas macOS/iOS conhecidas → fr-FR local → qualquer fr-FR → fr-CA → qualquer fr-*
-  return voices.find(v => /thomas|amelie|amélie|aurélie|aurelie|virginie|nicolas|jean-pierre/i.test(v.name) && /^fr/i.test(v.lang))
+  return voices.find(v => /thomas|amelie|amélie|aurélie|aurelie|virginie|nicolas|jean-pierre|chantal|marie/i.test(v.name) && /^fr/i.test(v.lang))
       || voices.find(v => v.lang === 'fr-FR' && v.localService)
       || voices.find(v => v.lang === 'fr-FR')
       || voices.find(v => v.lang === 'fr-CA')
       || voices.find(v => /^fr/i.test(v.lang))
       || null;
 }
-function _doSpeak(text, opts) {
+function _doSpeak(text) {
   if (!text || typeof speechSynthesis === 'undefined') return;
+  const voice = pickFrenchVoice();
+  if (!voice) {
+    if (!_noVoiceWarned) {
+      _noVoiceWarned = true;
+      console.warn('[TTS] Nenhuma voz francesa instalada. Para ouvir pronúncia em francês, instala uma voz fr-FR nas Definições do macOS → Acessibilidade → Conteúdo Falado → Vozes do Sistema → Francês (Thomas/Amélie).');
+      // Mostra alerta UI uma vez
+      try {
+        const div = document.createElement('div');
+        div.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#c1281f;color:#fff;padding:12px 18px;border-radius:8px;font:14px system-ui;max-width:340px;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,0.3)';
+        div.innerHTML = '🔊 <b>Sem voz francesa instalada</b><br>Vai a Definições → Acessibilidade → Conteúdo Falado → Vozes do Sistema → adiciona "Thomas" ou "Amélie" (Francês). <button style="background:#fff;color:#c1281f;border:0;padding:4px 10px;border-radius:4px;margin-top:8px;cursor:pointer" onclick="this.parentNode.remove()">OK</button>';
+        document.body.appendChild(div);
+        setTimeout(() => { if (div.parentNode) div.remove(); }, 12000);
+      } catch(e) {}
+    }
+    return;
+  }
+  // Cancela QUALQUER fala em curso (incluindo da voz default que possa estar a iniciar)
   speechSynthesis.cancel();
-  const clean = String(text).replace(/\*+/g, '').replace(/\(.*?\)/g, '').replace(/\/[^\/]*$/, '').trim();
+  const clean = String(text).replace(/\*+/g, '').replace(/\([^)]*\)/g, '').replace(/\/[^\/]*$/, '').trim();
   if (!clean) return;
   const u = new SpeechSynthesisUtterance(clean);
-  u.lang = 'fr-FR';
-  u.rate = (opts && opts.rate) || 0.9;
-  u.pitch = (opts && opts.pitch) || 1;
-  const v = pickFrenchVoice();
-  if (v) u.voice = v;
-  // Pequeno delay garante que cancel() não corte a nova utterance no Chrome
-  setTimeout(() => speechSynthesis.speak(u), 60);
+  u.voice = voice;
+  u.lang = voice.lang; // usa o lang da voz selecionada (não 'fr-FR' fixo, que poderia ativar fallback)
+  u.rate = 0.9;
+  u.pitch = 1;
+  // Speak imediato — sem setTimeout (evita queue duplo)
+  speechSynthesis.speak(u);
 }
-function speak(text, opts) {
+function speak(text) {
   if (typeof speechSynthesis === 'undefined') return;
-  // Se as vozes ainda não estão carregadas, aguarda
+  // Throttle: ignora cliques duplos rápidos (< 200ms)
+  const now = Date.now();
+  if (now - _lastSpeak < 200) return;
+  _lastSpeak = now;
+  // Se as vozes ainda não estão carregadas, espera uma vez
   if (speechSynthesis.getVoices().length === 0) {
     let tries = 0;
     const wait = () => {
-      if (speechSynthesis.getVoices().length > 0 || tries >= 25) _doSpeak(text, opts);
-      else { tries++; setTimeout(wait, 80); }
+      if (speechSynthesis.getVoices().length > 0 || tries >= 20) _doSpeak(text);
+      else { tries++; setTimeout(wait, 100); }
     };
     wait();
   } else {
-    _doSpeak(text, opts);
+    _doSpeak(text);
   }
 }
-// Força o carregamento das vozes (alguns browsers só carregam após primeira interação ou getVoices)
 if (typeof speechSynthesis !== 'undefined') {
   speechSynthesis.getVoices();
-  speechSynthesis.onvoiceschanged = () => { /* refresh on event */ };
+  speechSynthesis.onvoiceschanged = () => { /* nothing — pickFrenchVoice lê o estado atual */ };
 }
 function SpeakBtn({ text, size }) {
   const cls = "fr-speak-btn" + (size === 'big' ? ' fr-speak-big' : '');
@@ -618,7 +638,36 @@ const MUSICAS = [
     yt: "https://www.youtube.com/results?search_query=aya+nakamura+djadja",
     letra: "https://www.paroles.net/aya-nakamura/paroles-djadja" }
 ];
-// LETRAS removidas — letras completas via link externo paroles.net (na própria fonte oficial).
+// ==================== LETRAS DE MÚSICA (estrutura para preenchimento próprio) ====================
+//
+// COMO ADICIONAR LETRAS:
+// 1. Procura a letra no Paroles.net (clica em "📜 Letra completa" no app)
+// 2. Cola cada verso em francês e a tua tradução portuguesa entre crochetes [ ] aqui em baixo
+// 3. Formato: { fr: "verso em francês", pt: "tradução portuguesa" },
+// 4. Grava o ficheiro e recarrega a página
+//
+// Exemplo para uma das músicas:
+//   "piaf-vie-en-rose": [
+//     { fr: "<cola aqui o 1º verso>", pt: "<tradução>" },
+//     { fr: "<cola aqui o 2º verso>", pt: "<tradução>" },
+//   ],
+//
+// Cada música usa o seu `id` como chave (vê acima em MUSICAS).
+// Enquanto estiverem vazias [], o app mostra apenas o link para Paroles.net.
+
+const LETRAS = {
+  "piaf-vie-en-rose":   [ /* cola aqui — vê instruções acima */ ],
+  "aznavour-boheme":    [ ],
+  "brel-quitte":        [ ],
+  "stromae-papaoutai":  [ ],
+  "zaz-jeveux":         [ ],
+  "dassin-champs":      [ ],
+  "vegedream-coupe":    [ ],
+  "mhd-afrotrap3":      [ ],
+  "indila-derniere":    [ ],
+  "bruni-quelquun":     [ ],
+  "nakamura-djadja":    [ ]
+};
 
 // ==================== MÓDULOS (apostila PFV — 4 módulos, 52 leçons) ====================
 // Internamente índice 0..3; UI mostra "Module 1..4"
@@ -1293,16 +1342,86 @@ const IMG_KEYS = {
   "le nuage": "clouds,sky"
 };
 
+// ==================== EXERCÍCIOS DE COMPLETAR ====================
+// Exercícios de gramática estilo "preenche o espaço em branco" (baseados na apostila PFV).
+// Cada item: { frase: "Je ___ français.", opcoes: [..], a: índice da resposta, expl: explicação, mod: módulo mínimo }
+const EXERCICIOS = [
+  // Module 1 — verbos
+  { frase: "Je ___ portugais.", opcoes: ["suis", "es", "est", "sont"], a: 0, expl: "1ª pessoa: je suis", mod: 0 },
+  { frase: "Tu ___ français?", opcoes: ["es", "est", "suis", "êtes"], a: 0, expl: "2ª pessoa: tu es", mod: 0 },
+  { frase: "Il ___ content.", opcoes: ["est", "es", "suis", "sont"], a: 0, expl: "il/elle est", mod: 0 },
+  { frase: "Nous ___ heureux.", opcoes: ["sont", "êtes", "sommes", "est"], a: 2, expl: "nous sommes", mod: 0 },
+  { frase: "Vous ___ professeurs?", opcoes: ["es", "est", "êtes", "sont"], a: 2, expl: "vous êtes", mod: 0 },
+  { frase: "Elles ___ au restaurant.", opcoes: ["est", "êtes", "sommes", "sont"], a: 3, expl: "ils/elles sont", mod: 0 },
+  { frase: "J' ___ à Paris depuis 2 ans.", opcoes: ["habite", "habites", "habitons", "habitez"], a: 0, expl: "je + verbo -ER → -e", mod: 0 },
+  { frase: "Tu ___ français.", opcoes: ["parle", "parles", "parlons", "parlent"], a: 1, expl: "tu + -es", mod: 0 },
+  { frase: "Nous ___ au Brésil.", opcoes: ["voyage", "voyages", "voyageons", "voyagent"], a: 2, expl: "nous + verbo em -ger → -geons", mod: 0 },
+  { frase: "Vous ___ la musique.", opcoes: ["écoute", "écoutes", "écoutez", "écoutent"], a: 2, expl: "vous + -ez", mod: 0 },
+  { frase: "Ils ___ très vite.", opcoes: ["danse", "danses", "dansons", "dansent"], a: 3, expl: "ils/elles + -ent (mudo)", mod: 0 },
+  // Artigos
+  { frase: "___ hôtel est cher.", opcoes: ["Le", "La", "L'", "Les"], a: 2, expl: "hôtel: h mudo → l'", mod: 0 },
+  { frase: "J'ai ___ chien.", opcoes: ["un", "une", "des", "le"], a: 0, expl: "chien: masc. → un", mod: 0 },
+  { frase: "Elle a ___ voiture.", opcoes: ["un", "une", "des", "la"], a: 1, expl: "voiture: fem. → une", mod: 0 },
+  // Avoir
+  { frase: "J' ___ vingt-cinq ans.", opcoes: ["suis", "es", "ai", "as"], a: 2, expl: "idade → avoir: j'ai", mod: 0 },
+  { frase: "Elle ___ deux frères.", opcoes: ["est", "a", "as", "ai"], a: 1, expl: "il/elle a", mod: 0 },
+  { frase: "Nous ___ faim!", opcoes: ["sommes", "avons", "avez", "ont"], a: 1, expl: "avoir faim → nous avons", mod: 0 },
+  // Negação
+  { frase: "Je ___ parle ___ français.", opcoes: ["ne / pas", "n' / pas", "ne / point", "pas / ne"], a: 0, expl: "ne + verbo + pas (consoante)", mod: 0 },
+  { frase: "Il ___ est ___ là.", opcoes: ["ne / pas", "n' / pas", "ne / point", "pas / ne"], a: 1, expl: "antes de vogal: n'", mod: 0 },
+  // Possessivos
+  { frase: "C'est ___ sœur. (eu)", opcoes: ["mon", "ma", "mes", "mien"], a: 1, expl: "sœur fem. sing. → ma", mod: 0 },
+  { frase: "Voilà ___ amie. (eu)", opcoes: ["mon", "ma", "mes", "mien"], a: 0, expl: "amie começa por vogal → mon", mod: 0 },
+  { frase: "Ce sont ___ enfants. (nós)", opcoes: ["notre", "nos", "votre", "vos"], a: 1, expl: "enfants plural → nos", mod: 0 },
+  // Demonstrativos
+  { frase: "___ livre est intéressant.", opcoes: ["Ce", "Cet", "Cette", "Ces"], a: 0, expl: "livre masc. consoante → ce", mod: 0 },
+  { frase: "___ hôtel est moderne.", opcoes: ["Ce", "Cet", "Cette", "Ces"], a: 1, expl: "masc. + vogal → cet", mod: 0 },
+  { frase: "___ maison est belle.", opcoes: ["Ce", "Cet", "Cette", "Ces"], a: 2, expl: "maison fem. → cette", mod: 0 },
+  // Module 2 — Imparfait, partitivos, COD/COI
+  { frase: "Quand j' ___ petit, je jouais au foot.", opcoes: ["suis", "étais", "été", "serai"], a: 1, expl: "imparfait de être: j'étais", mod: 1 },
+  { frase: "Nous ___ en France pendant 3 ans.", opcoes: ["habitons", "habitions", "habitions", "habitons"], a: 1, expl: "imparfait + nous: -ions", mod: 1 },
+  { frase: "Je voudrais ___ pain, s'il vous plaît.", opcoes: ["le", "du", "de la", "des"], a: 1, expl: "pain masc., quantidade → du", mod: 1 },
+  { frase: "Tu veux ___ eau?", opcoes: ["du", "de la", "de l'", "des"], a: 2, expl: "eau começa por vogal → de l'", mod: 1 },
+  { frase: "Je ne mange pas ___ viande.", opcoes: ["la", "de la", "de", "du"], a: 2, expl: "partitivo na negação → de", mod: 1 },
+  { frase: "Tu vois Pierre? — Oui, je ___ vois.", opcoes: ["lui", "le", "la", "les"], a: 1, expl: "COD masc. sing. → le", mod: 1 },
+  { frase: "Je parle à Marie → Je ___ parle.", opcoes: ["la", "lui", "elle", "leur"], a: 1, expl: "COI à pessoa → lui", mod: 1 },
+  { frase: "J'écris à mes amis → Je ___ écris.", opcoes: ["les", "lui", "leur", "eux"], a: 2, expl: "COI plural → leur", mod: 1 },
+  // Verbos pronominais
+  { frase: "Je ___ lève à 7h.", opcoes: ["me", "te", "se", "nous"], a: 0, expl: "je + me", mod: 1 },
+  { frase: "Comment tu ___ appelles?", opcoes: ["me", "te", "se", "t'"], a: 3, expl: "antes de vogal: t'", mod: 1 },
+  // Imperativo
+  { frase: "___ tes légumes!", opcoes: ["Manges", "Mange", "Mangez", "Mangeons"], a: 1, expl: "imperativo de tu para -ER: sem -s", mod: 1 },
+  { frase: "___ sympa, ne dis rien!", opcoes: ["Sois", "Es", "Sont", "Es"], a: 0, expl: "imperativo de être: sois", mod: 1 },
+  // Module 3 — Futur, conditionnel
+  { frase: "Demain, je ___ à Paris.", opcoes: ["vais", "irai", "vais aller", "allerai"], a: 1, expl: "futur simple: j'irai", mod: 2 },
+  { frase: "Nous ___ contents de te voir.", opcoes: ["sommes", "serons", "étions", "soyons"], a: 1, expl: "futur de être: nous serons", mod: 2 },
+  { frase: "Si j'avais le temps, je ___ voyager.", opcoes: ["pourrai", "pourrais", "pouvais", "peux"], a: 1, expl: "hipótese irreal: conditionnel", mod: 2 },
+  { frase: "Tu ___ dormir plus.", opcoes: ["devras", "devrais", "dois", "devrai"], a: 1, expl: "conselho → tu devrais", mod: 2 },
+  { frase: "Je ___ un café, s'il vous plaît.", opcoes: ["veux", "veuille", "voudrais", "voudrai"], a: 2, expl: "pedido educado → je voudrais", mod: 2 },
+  { frase: "Si tu ___ riche, tu voyagerais.", opcoes: ["es", "étais", "serais", "fus"], a: 1, expl: "si + imparfait (irreal pres.)", mod: 2 },
+  // Module 4 — Subjuntivo, EN/Y, relativos
+  { frase: "Il faut que tu ___ là.", opcoes: ["es", "sois", "seras", "étais"], a: 1, expl: "subj. de être: que tu sois", mod: 3 },
+  { frase: "Je veux que vous ___ attention.", opcoes: ["faites", "fassiez", "ferez", "feriez"], a: 1, expl: "subj. de faire: que vous fassiez", mod: 3 },
+  { frase: "Tu vas à Paris? — Oui, j' ___ vais.", opcoes: ["en", "y", "le", "la"], a: 1, expl: "lugar → y", mod: 3 },
+  { frase: "Tu veux du café? — Oui, j' ___ veux.", opcoes: ["en", "y", "le", "la"], a: 0, expl: "partitivo → en", mod: 3 },
+  { frase: "L'homme ___ parle est mon prof.", opcoes: ["que", "qui", "dont", "où"], a: 1, expl: "sujeito → qui", mod: 3 },
+  { frase: "Le livre ___ je lis est intéressant.", opcoes: ["qui", "que", "dont", "où"], a: 1, expl: "COD → que", mod: 3 },
+  { frase: "La maison ___ je rêve.", opcoes: ["qui", "que", "dont", "où"], a: 2, expl: "rêver de + dont", mod: 3 }
+];
+
 function imgUrl(fr, width, height) {
   const key = IMG_KEYS[fr];
   if (!key) return null;
-  const w = width || 320, h = height || 240;
-  // lock = comprimento da palavra (consistente, mas pode mudar entre palavras parecidas)
-  const lock = Math.max(1, (fr.length * 7 + key.length * 3) % 1000);
-  return 'https://loremflickr.com/' + w + '/' + h + '/' + encodeURIComponent(key) + '?lock=' + lock;
+  const w = width || 400, h = height || 280;
+  // Pollinations.ai gera imagens AI on-the-fly. Não precisa API key. Sempre funciona.
+  // Limpa o prompt e adiciona um seed consistente por palavra para imagens reprodutíveis.
+  const prompt = key.replace(/,/g, ' ') + ', photo realistic, simple background, centered';
+  const seed = Math.abs(fr.split('').reduce((a, c) => a + c.charCodeAt(0), 0)) % 99999;
+  return 'https://image.pollinations.ai/prompt/' + encodeURIComponent(prompt) +
+    '?width=' + w + '&height=' + h + '&nologo=true&seed=' + seed + '&model=flux';
 }
 
-window.__FR_DATA__ = { VOCAB, ALL_VOCAB, vocabUpToAula, VERBOS, CONJ_IRREG, conjugar, FRASES, MUSICAS, AULAS, FONETICA, IMG_KEYS, imgUrl, traduzirNumero, shuffle, useNoRepeat, dicaInteligente, speak, SpeakBtn };
+window.__FR_DATA__ = { VOCAB, ALL_VOCAB, vocabUpToAula, VERBOS, CONJ_IRREG, conjugar, FRASES, MUSICAS, LETRAS, AULAS, FONETICA, IMG_KEYS, imgUrl, EXERCICIOS, traduzirNumero, shuffle, useNoRepeat, dicaInteligente, speak, SpeakBtn };
 
 // ==================== STYLES ====================
 const STYLES = `
@@ -1471,7 +1590,10 @@ const STYLES = `
 .fr-quiz-bar-fill { height: 100%; background: var(--accent); transition: width 0.3s; }
 .fr-quiz-card { background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 2rem 1.5rem; box-shadow: var(--shadow-lift); }
 .fr-quiz-hint { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--mute); text-align: center; margin-bottom: 0.85rem; }
-.fr-quiz-prompt { font-family: 'Fraunces', serif; font-weight: 600; font-size: clamp(1.5rem, 4vw, 2.2rem); text-align: center; margin-bottom: 1.5rem; color: var(--accent-deep); display: flex; align-items: center; justify-content: center; gap: 0.5rem; flex-wrap: wrap; }
+.fr-quiz-prompt { font-family: 'Fraunces', serif; font-weight: 600; font-size: clamp(1.5rem, 4vw, 2.2rem); text-align: center; margin-bottom: 1.5rem; color: var(--accent-deep); display: flex; align-items: center; justify-content: center; gap: 0.5rem; flex-wrap: wrap; line-height: 1.3; }
+.fr-quiz-blank { display: inline-block; min-width: 70px; padding: 0 0.4rem; border-bottom: 3px solid var(--rouge); color: var(--rouge); margin: 0 0.2rem; }
+.fr-quiz-option { display: flex; align-items: center; gap: 0.5rem; }
+.fr-speak-inline { width: 26px; height: 26px; font-size: 0.75rem; padding: 0; }
 .fr-quiz-options { display: flex; flex-direction: column; gap: 0.5rem; }
 .fr-quiz-option { font-family: inherit; font-size: 0.95rem; text-align: left; padding: 0.85rem 1.1rem; border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 4px; cursor: pointer; transition: all 0.15s; }
 .fr-quiz-option:hover:not(.disabled) { border-color: var(--accent); transform: translateX(4px); }
@@ -2088,112 +2210,165 @@ function Flashcards({ markCard, studied, userLevel, openLevel }) {
 }
 
 function Quiz({ recordQuiz, userLevel, openLevel }) {
-  const [stage, setStage] = useState('setup');
-  const [direction, setDirection] = useState('fr-pt');
+  // Auto-start, mistura vocabulário + completar frase, auto-restart no fim
   const [questions, setQuestions] = useState([]);
   const [current, setCurrent] = useState(0);
   const [score, setScore] = useState(0);
   const [selected, setSelected] = useState(null);
-  const [feedback, setFeedback] = useState(null);
+  const [stage, setStage] = useState('playing'); // playing | done
 
-  const start = () => {
+  // Construir conjunto de 10 perguntas: ~6 vocab + ~4 completar (se disponíveis)
+  const build = () => {
     const pool = vocabUpToAula(userLevel);
-    if (pool.length < 4) return;
-    const sample = shuffle(pool).slice(0, Math.min(10, pool.length));
-    const qs = sample.map(item => {
+    if (pool.length < 4) return [];
+    const exercPool = EXERCICIOS.filter(e => e.mod <= userLevel);
+    const nExerc = Math.min(4, exercPool.length);
+    const nVocab = 10 - nExerc;
+    // Vocab questions — alternar direção aleatoriamente
+    const vocabSample = shuffle(pool).slice(0, nVocab);
+    const vocabQs = vocabSample.map(item => {
+      const direction = Math.random() < 0.5 ? 'fr-pt' : 'pt-fr';
       const distractors = shuffle(pool.filter(v => v.fr !== item.fr)).slice(0, 3);
-      const options = shuffle([...distractors, item]);
+      const optsItems = shuffle([...distractors, item]);
       return {
+        tipo: 'vocab',
+        direction,
         prompt: direction === 'fr-pt' ? item.fr : item.pt,
+        promptFr: item.fr,
+        promptSpeak: direction === 'fr-pt' ? item.fr : null,
         correct: direction === 'fr-pt' ? item.pt : item.fr,
-        options: options.map(o => direction === 'fr-pt' ? o.pt : o.fr),
-        item: item
+        correctFr: item.fr,
+        options: optsItems.map(o => direction === 'fr-pt' ? o.pt : o.fr),
+        explica: direction === 'fr-pt' ? null : item.fr + ' = ' + item.pt
       };
     });
-    setQuestions(qs); setCurrent(0); setScore(0); setSelected(null); setFeedback(null); setStage('playing');
+    const exercQs = shuffle(exercPool).slice(0, nExerc).map(e => ({
+      tipo: 'completar',
+      prompt: e.frase,
+      promptSpeak: e.frase.replace(/_+/g, '...'),
+      correct: e.opcoes[e.a],
+      options: e.opcoes,
+      explica: e.expl
+    }));
+    return shuffle([...vocabQs, ...exercQs]);
   };
+
+  const startNew = () => {
+    const qs = build();
+    setQuestions(qs); setCurrent(0); setScore(0); setSelected(null); setStage('playing');
+  };
+  useEffect(() => { startNew(); }, [userLevel]);
 
   const answer = opt => {
     if (selected) return;
+    const q = questions[current];
     setSelected(opt);
-    const acertou = opt === questions[current].correct;
-    if (acertou) { setScore(s => s + 1); setFeedback('correct'); } else setFeedback('wrong');
-    setTimeout(() => nextQ(), acertou ? 1300 : 2200);
+    const acertou = opt === q.correct;
+    if (acertou) {
+      setScore(s => s + 1);
+      // Speak correct French word for reinforcement
+      if (q.tipo === 'vocab') speak(q.correctFr);
+      else if (q.tipo === 'completar') speak(q.prompt.replace(/_+/g, q.correct));
+    } else {
+      // No erro: speak the correct French answer
+      if (q.tipo === 'vocab') setTimeout(() => speak(q.correctFr), 300);
+      else if (q.tipo === 'completar') setTimeout(() => speak(q.prompt.replace(/_+/g, q.correct)), 300);
+    }
+    setTimeout(() => nextQ(acertou), acertou ? 1500 : 2800);
   };
-  const nextQ = () => {
-    setCurrent(c => {
-      if (c + 1 >= questions.length) {
-        setScore(s => { recordQuiz(s, questions.length); return s; });
-        setStage('done');
-        return c;
-      }
-      return c + 1;
-    });
-    setSelected(null); setFeedback(null);
+  const nextQ = (lastWasCorrect) => {
+    if (current + 1 >= questions.length) {
+      const finalScore = score + (lastWasCorrect ? 1 : 0);
+      recordQuiz(finalScore, questions.length);
+      setStage('done');
+      // Auto-restart depois de 4 segundos
+      setTimeout(() => { startNew(); }, 4500);
+      return;
+    }
+    setCurrent(c => c + 1);
+    setSelected(null);
   };
 
-  if (stage === 'setup') {
-    const pool = vocabUpToAula(userLevel);
-    return (
-      <div>
-        <PageHeader title="Quiz" sub={`${Math.min(10, pool.length)} perguntas das aulas que já fizeste.`} userLevel={userLevel} openLevel={openLevel} />
-        <div className="fr-controls">
-          <div className="fr-control-group">
-            <label className="fr-label">Direção</label>
-            <div className="fr-toggle">
-              <button className={direction === 'fr-pt' ? 'active' : ''} onClick={() => setDirection('fr-pt')}>FR → PT</button>
-              <button className={direction === 'pt-fr' ? 'active' : ''} onClick={() => setDirection('pt-fr')}>PT → FR</button>
-            </div>
-          </div>
-        </div>
-        <button className="fr-btn fr-btn-primary fr-btn-big" onClick={start} disabled={pool.length < 4}>Começar quiz</button>
-        {pool.length < 4 && <p style={{color:'var(--mute)',marginTop:'1rem'}}>Precisas de pelo menos 4 palavras para o quiz.</p>}
-      </div>
-    );
+  if (!questions.length) {
+    return <div><PageHeader title="Quiz" sub="Precisas de pelo menos 4 palavras desbloqueadas." userLevel={userLevel} openLevel={openLevel} /></div>;
   }
+
   if (stage === 'done') {
     const pct = Math.round((score / questions.length) * 100);
-    let msg;
-    if (pct >= 90) msg = "Excellent! Quase perfeito.";
-    else if (pct >= 70) msg = "Très bien! Continua assim.";
-    else if (pct >= 50) msg = "Bon effort — revê os flashcards.";
-    else msg = "Pas de stress — pratica mais e tenta de novo.";
+    let msg, emoji;
+    if (pct === 100) { msg = "Parfait! Sabes tudo."; emoji = "🏆"; }
+    else if (pct >= 90) { msg = "Excellent! Quase perfeito."; emoji = "⭐"; }
+    else if (pct >= 70) { msg = "Très bien! Continua assim."; emoji = "👍"; }
+    else if (pct >= 50) { msg = "Bon effort — revê os flashcards."; emoji = "📚"; }
+    else { msg = "Pas de stress — pratica mais."; emoji = "💪"; }
     return (
-      <div className="fr-quiz-done">
-        <h2 className="fr-page-title" style={{textAlign:'center'}}>Résultat</h2>
-        <div className="fr-result-score">{score}<span>/{questions.length}</span></div>
-        <div className="fr-result-pct">{pct}%</div>
-        <p className="fr-result-msg">{msg}</p>
-        <div style={{display:'flex',gap:'0.5rem',justifyContent:'center',flexWrap:'wrap'}}>
-          <button className="fr-btn fr-btn-primary" onClick={start}>Novo quiz</button>
-          <button className="fr-btn" onClick={() => setStage('setup')}>Voltar</button>
+      <div>
+        <PageHeader title="Quiz" sub="A começar próximo quiz em segundos…" userLevel={userLevel} openLevel={openLevel} />
+        <div className="fr-quiz-done">
+          <div style={{fontSize:'3rem',marginBottom:'0.5rem'}}>{emoji}</div>
+          <h2 className="fr-page-title" style={{textAlign:'center'}}>Résultat</h2>
+          <div className="fr-result-score">{score}<span>/{questions.length}</span></div>
+          <div className="fr-result-pct">{pct}%</div>
+          <p className="fr-result-msg">{msg}</p>
+          <p style={{color:'var(--mute)',fontSize:'0.9rem'}}>Próximo quiz daqui a 4s — ou clica para começar já</p>
+          <div style={{display:'flex',gap:'0.5rem',justifyContent:'center',flexWrap:'wrap'}}>
+            <button className="fr-btn fr-btn-primary" onClick={startNew}>▶ Novo quiz agora</button>
+          </div>
         </div>
       </div>
     );
   }
+
   const q = questions[current];
+  // Renderiza a frase com lacuna substituída por um placeholder visível
+  const renderPrompt = () => {
+    if (q.tipo === 'completar') {
+      // Substitui _+ por um placeholder estilizado
+      const parts = q.prompt.split(/_+/);
+      return parts.map((p, i) => (
+        <React.Fragment key={i}>
+          {p}
+          {i < parts.length - 1 && <span className="fr-quiz-blank">_____</span>}
+        </React.Fragment>
+      ));
+    }
+    return q.prompt;
+  };
   return (
     <div>
-      <div className="fr-quiz-meta"><span>Pergunta {current + 1} de {questions.length}</span><span>Acertos: {score}</span></div>
-      <div className="fr-quiz-bar"><div className="fr-quiz-bar-fill" style={{width:`${(current / questions.length) * 100}%`}} /></div>
+      <PageHeader title="Quiz" sub={"Pergunta " + (current + 1) + " de " + questions.length + " · Acertos: " + score} userLevel={userLevel} openLevel={openLevel} />
+      <div className="fr-quiz-meta"><span>{q.tipo === 'completar' ? '✍️ Completa a frase' : (q.direction === 'fr-pt' ? '🇫🇷→🇵🇹 Traduz' : '🇵🇹→🇫🇷 Como se diz')}</span><span>Acertos: {score}</span></div>
+      <div className="fr-quiz-bar"><div className="fr-quiz-bar-fill" style={{width:(current / questions.length * 100) + '%'}} /></div>
       <div className="fr-quiz-card">
-        <div className="fr-quiz-hint">Qual a tradução de:</div>
+        <div className="fr-quiz-hint">
+          {q.tipo === 'completar' ? 'Escolhe a palavra que preenche correctamente:' : (q.direction === 'fr-pt' ? 'Qual é a tradução de:' : 'Qual é a tradução em francês?')}
+        </div>
         <div className="fr-quiz-prompt">
-          {q.prompt}
-          {direction === 'fr-pt' && <SpeakBtn text={q.item.fr} />}
+          <span>{renderPrompt()}</span>
+          {q.promptSpeak && <SpeakBtn text={q.promptSpeak} />}
         </div>
         <div className="fr-quiz-options">
           {q.options.map((opt, i) => {
             const correct = selected && opt === q.correct;
             const wrong = selected === opt && opt !== q.correct;
             return (
-              <button key={i} className={`fr-quiz-option ${correct ? 'correct' : ''} ${wrong ? 'wrong' : ''} ${selected ? 'disabled' : ''}`} onClick={() => answer(opt)} disabled={!!selected}>
-                {String.fromCharCode(65 + i)}. {opt}
-                {direction === 'pt-fr' && selected && opt === q.correct && ' '}
+              <button key={i} className={'fr-quiz-option' + (correct?' correct':'') + (wrong?' wrong':'') + (selected?' disabled':'')} onClick={() => answer(opt)} disabled={!!selected}>
+                <span>{String.fromCharCode(65 + i)}. {opt}</span>
+                {/* Botão TTS por opção quando a opção está em francês (PT→FR) ou completar */}
+                {(q.direction === 'pt-fr' || q.tipo === 'completar') && (
+                  <span style={{marginLeft:'auto'}} onClick={(e) => { e.stopPropagation(); speak(opt); }}>
+                    <span className="fr-speak-btn fr-speak-inline" title="Ouvir esta opção">🔊</span>
+                  </span>
+                )}
               </button>
             );
           })}
         </div>
+        {selected && q.explica && (
+          <div style={{marginTop:'1rem',padding:'0.75rem 1rem',background:'rgba(200,156,79,0.12)',border:'1px dashed var(--gold)',borderRadius:'6px',fontSize:'0.9rem',color:'var(--ink-soft)'}}>
+            💡 {q.explica}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -2541,61 +2716,55 @@ function TreinoChoice({ pool, recordTreino }) {
 }
 
 function TreinoMatch({ pool, recordTreino }) {
-  // Grelha 4x2 plana de 8 cartões (4 FR + 4 PT) totalmente misturados.
-  // Pares nunca estão alinhados — todos os cartões aparecem em posições aleatórias.
+  // 2 colunas (FR à esquerda, PT à direita), cada uma com a sua ordem aleatória.
+  // GARANTIDO: o par correto NUNCA aparece na mesma linha.
   const [pares, setPares] = useState([]);
-  const [cards, setCards] = useState([]); // [{id, kind:'fr'|'pt', label, paraKey}]
-  const [picked, setPicked] = useState([]); // ids selecionados (max 2)
-  const [matched, setMatched] = useState({}); // {paraKey: true}
-  const [wrong, setWrong] = useState(null); // [id1, id2]
+  const [colFR, setColFR] = useState([]);
+  const [colPT, setColPT] = useState([]);
+  const [selFR, setSelFR] = useState(null); // key (fr) selecionada na coluna FR
+  const [selPT, setSelPT] = useState(null); // key (fr) selecionada na coluna PT
+  const [matched, setMatched] = useState({});
+  const [wrong, setWrong] = useState(null);
   const { nextN } = useNoRepeat(pool);
-  const N = 4;
+  const N = 5; // 5 pares por ronda
   const gerar = () => {
     const escolhidos = nextN(N);
     if (escolhidos.length < N) return;
     setPares(escolhidos);
-    const all = [];
-    escolhidos.forEach((p, i) => {
-      all.push({ id: 'fr-' + i + '-' + Math.random().toString(36).slice(2,7), kind: 'fr', label: p.fr, paraKey: p.fr });
-      all.push({ id: 'pt-' + i + '-' + Math.random().toString(36).slice(2,7), kind: 'pt', label: p.pt, paraKey: p.fr });
-    });
-    // Embaralhar várias vezes para garantir mistura visual completa
-    let mixed = shuffle(all);
-    // Garantir que nenhum par fica em posição "óbvia" (mesma linha em grelha 2 colunas)
+    // Ordem aleatória em cada coluna, MAS as posições não podem coincidir
+    let frOrder = shuffle(escolhidos.map(p => p.fr));
+    let ptOrder = shuffle(escolhidos.map(p => p.fr));
     let tries = 0;
-    while (tries++ < 20) {
-      let conflito = false;
-      // Numa grelha de 2 colunas: posições 0,1 = linha 0; 2,3 = linha 1; ...
-      for (let i = 0; i < mixed.length; i += 2) {
-        if (mixed[i].paraKey === mixed[i+1].paraKey) { conflito = true; break; }
+    while (tries++ < 50) {
+      // Verifica se há alguma linha onde FR[i] e PT[i] são do mesmo par (mesmo key)
+      let conflito = -1;
+      for (let i = 0; i < frOrder.length; i++) {
+        if (frOrder[i] === ptOrder[i]) { conflito = i; break; }
       }
-      if (!conflito) break;
-      mixed = shuffle(all);
+      if (conflito === -1) break;
+      // Troca o item em conflito com outra posição aleatória da coluna PT
+      const swapWith = (conflito + 1 + Math.floor(Math.random() * (ptOrder.length - 1))) % ptOrder.length;
+      [ptOrder[conflito], ptOrder[swapWith]] = [ptOrder[swapWith], ptOrder[conflito]];
     }
-    setCards(mixed);
-    setPicked([]); setMatched({}); setWrong(null);
+    setColFR(frOrder);
+    setColPT(ptOrder);
+    setSelFR(null); setSelPT(null); setMatched({}); setWrong(null);
   };
   useEffect(() => { gerar(); }, []);
-  const pick = (card) => {
-    if (matched[card.paraKey]) return;
-    if (picked.find(p => p.id === card.id)) return;
-    if (wrong) return;
-    const np = [...picked, card];
-    setPicked(np);
-    if (np.length === 2) {
-      if (np[0].paraKey === np[1].paraKey && np[0].kind !== np[1].kind) {
-        // Match!
-        setMatched(m => ({...m, [np[0].paraKey]: true}));
+  useEffect(() => {
+    if (selFR && selPT) {
+      if (selFR === selPT) {
+        setMatched(m => ({...m, [selFR]: true}));
         recordTreino(true);
-        speak(np[0].paraKey); // FR
-        setPicked([]);
+        speak(selFR);
+        setSelFR(null); setSelPT(null);
       } else {
         recordTreino(false);
-        setWrong([np[0].id, np[1].id]);
-        setTimeout(() => { setPicked([]); setWrong(null); }, 800);
+        setWrong({ fr: selFR, pt: selPT });
+        setTimeout(() => { setSelFR(null); setSelPT(null); setWrong(null); }, 700);
       }
     }
-  };
+  }, [selFR, selPT]);
   const totMatch = Object.keys(matched).length;
   const completo = totMatch === pares.length && pares.length > 0;
   useEffect(() => {
@@ -2604,29 +2773,39 @@ function TreinoMatch({ pool, recordTreino }) {
       return () => clearTimeout(t);
     }
   }, [completo]);
+  // Lookup helper: dado um key fr, retorna a tradução PT
+  const ptOf = (frKey) => { const p = pares.find(x => x.fr === frKey); return p ? p.pt : ''; };
   return (
     <div className="fr-treino-card" style={{textAlign:'left'}}>
       <p style={{textAlign:'center',color:'var(--mute)',fontSize:'0.92rem',marginTop:0}}>
-        Clica em <strong style={{color:'var(--accent)'}}>2 cartões</strong> para formar um par <strong>francês ↔ português</strong>. Os cartões estão todos misturados.
+        Liga cada palavra em <strong style={{color:'var(--accent)'}}>francês</strong> à sua tradução em <strong>português</strong>. Os pares NÃO estão alinhados na mesma linha.
       </p>
-      <div className="fr-match-flat">
-        {cards.map(card => {
-          const isMatched = matched[card.paraKey];
-          const isPicked = picked.find(p => p.id === card.id);
-          const isWrong = wrong && wrong.includes(card.id);
-          const cls = 'fr-match-cell ' + (card.kind === 'fr' ? 'fr' : 'pt') + (isMatched?' matched':'') + (isPicked?' selected':'') + (isWrong?' wrong':'');
+      <div className="fr-match-grid">
+        <div className="fr-match-col-head">Français</div>
+        <div className="fr-match-col-head">Português</div>
+        {colFR.map((frKey, idx) => {
+          const ptKey = colPT[idx];
+          if (!ptKey) return null;
+          const frMatched = matched[frKey], frSel = selFR === frKey, frWrong = wrong && wrong.fr === frKey;
+          const ptMatched = matched[ptKey], ptSel = selPT === ptKey, ptWrong = wrong && wrong.pt === ptKey;
           return (
-            <button key={card.id} className={cls} disabled={isMatched} onClick={() => pick(card)}>
-              <span className="fr-match-kind-tag">{card.kind === 'fr' ? 'FR' : 'PT'}</span>
-              <span className="fr-match-text">{card.label}</span>
-            </button>
+            <React.Fragment key={idx}>
+              <button className={'fr-match-cell fr' + (frMatched?' matched':'') + (frSel?' selected':'') + (frWrong?' wrong':'')}
+                disabled={frMatched} onClick={() => !frMatched && setSelFR(frKey)}>
+                <span className="fr-match-text">{frKey}</span>
+              </button>
+              <button className={'fr-match-cell pt' + (ptMatched?' matched':'') + (ptSel?' selected':'') + (ptWrong?' wrong':'')}
+                disabled={ptMatched} onClick={() => !ptMatched && setSelPT(ptKey)}>
+                <span className="fr-match-text">{ptOf(ptKey)}</span>
+              </button>
+            </React.Fragment>
           );
         })}
       </div>
       <div style={{textAlign:'center',marginTop:'1rem'}}>
         <p style={{color:'var(--mute)',fontSize:'0.85rem'}}>{totMatch}/{pares.length} pares</p>
-        {completo && <p style={{color:'var(--correct)',fontWeight:600,marginBottom:'0.85rem'}}>✓ Completaste! Próxima ronda…</p>}
-        <button className="fr-btn" onClick={gerar}>{completo ? 'Próxima →' : '🔄 Baralhar'}</button>
+        {completo && <p style={{color:'var(--correct)',fontWeight:600,marginBottom:'0.85rem'}}>✓ Très bien! Próxima ronda…</p>}
+        <button className="fr-btn" onClick={gerar}>{completo ? 'Próxima →' : '🔄 Nova ronda'}</button>
       </div>
     </div>
   );
@@ -2737,13 +2916,15 @@ function Musicas({ userLevel, openLevel }) {
   const musicasD = MUSICAS.filter(m => m.aula <= userLevel);
   return (
     <div>
-      <PageHeader title="Música francesa" sub="Clássicos e atuais. Cada música tem link para o videoclip + letra completa em Paroles.net." userLevel={userLevel} openLevel={openLevel} />
+      <PageHeader title="Música francesa" sub="Clica numa música para abrir. Se já colaste a letra no código, aparece aqui com tradução lado-a-lado e 🔊 em cada verso." userLevel={userLevel} openLevel={openLevel} />
       {musicasD.length === 0 && <div className="fr-empty">Sem músicas neste módulo.</div>}
       <div className="fr-musica-acordeao">
         {musicasD.map(m => {
           const isOpen = openId === m.id;
+          const letra = (LETRAS && LETRAS[m.id]) || [];
+          const temLetra = Array.isArray(letra) && letra.length > 0;
           return (
-            <div key={m.id} className={`fr-musica-aula-card ${isOpen?'open':''}`}>
+            <div key={m.id} className={'fr-musica-aula-card' + (isOpen?' open':'')}>
               <button className="fr-musica-aula-header" onClick={() => setOpenId(isOpen ? null : m.id)}>
                 <div className="fr-musica-aula-num">M{m.aula + 1}</div>
                 <div className="fr-musica-aula-info">
@@ -2757,12 +2938,44 @@ function Musicas({ userLevel, openLevel }) {
                   <p style={{color:'var(--ink-soft)',fontSize:'0.92rem',marginTop:'0.5rem'}}>{m.sobre}</p>
                   <div className="fr-musica-yt-row">
                     <a className="fr-yt-link" href={m.yt} target="_blank" rel="noopener">▶ Ver no YouTube</a>
-                    <a className="fr-btn fr-btn-primary" href={m.letra} target="_blank" rel="noopener" style={{textDecoration:'none'}}>📜 Letra completa (Paroles.net)</a>
-                    <button className="fr-btn" onClick={() => speak(m.titulo)}>🔊 Ouvir título</button>
+                    <a className="fr-btn fr-btn-primary" href={m.letra} target="_blank" rel="noopener" style={{textDecoration:'none'}}>📜 Letra completa em Paroles.net</a>
                   </div>
-                  <div style={{padding:'0.75rem 0.95rem',background:'rgba(200,156,79,0.08)',border:'1px dashed var(--gold)',borderRadius:'6px',fontSize:'0.85rem',color:'var(--ink-soft)',lineHeight:'1.5',marginTop:'0.5rem'}}>
-                    💡 <strong>Como estudar:</strong> abre o YouTube num separador e a letra no outro. Ouve a música a seguir a letra, repete em voz alta. Identifica palavras conhecidas e marca as novas.
-                  </div>
+                  {temLetra ? (
+                    <React.Fragment>
+                      <h4 style={{fontFamily:"'Fraunces',serif",color:'var(--accent)',margin:'1.5rem 0 0.5rem',fontSize:'1rem'}}>📝 Letra · Tradução</h4>
+                      <div className="fr-letra-table">
+                        <div className="fr-letra-head-spk"></div>
+                        <div className="fr-letra-head-fr">Français</div>
+                        <div className="fr-letra-head-pt">Português</div>
+                        {letra.map((l, i) => (
+                          <React.Fragment key={i}>
+                            <div><SpeakBtn text={l.fr} /></div>
+                            <div className="fr-letra-fr">{l.fr}</div>
+                            <div className="fr-letra-pt">{l.pt}</div>
+                          </React.Fragment>
+                        ))}
+                      </div>
+                      <button className="fr-btn" style={{marginTop:'0.85rem'}} onClick={() => {
+                        // Lê a letra inteira, verso a verso, com pausa
+                        letra.forEach((l, i) => setTimeout(() => speak(l.fr), i * 2800));
+                      }}>🔊 Ouvir letra inteira</button>
+                    </React.Fragment>
+                  ) : (
+                    <div style={{padding:'0.85rem 1rem',background:'rgba(200,156,79,0.1)',border:'1px dashed var(--gold)',borderRadius:'6px',fontSize:'0.88rem',color:'var(--ink-soft)',lineHeight:'1.55',marginTop:'0.75rem'}}>
+                      💡 <strong>Como adicionar a letra aqui:</strong><br/>
+                      1. Clica em <strong>📜 Letra completa em Paroles.net</strong> e copia a letra.<br/>
+                      2. Abre o ficheiro <code style={{background:'rgba(0,0,0,0.05)',padding:'1px 6px',borderRadius:'3px'}}>index.html</code> num editor de texto.<br/>
+                      3. Procura por <code style={{background:'rgba(0,0,0,0.05)',padding:'1px 6px',borderRadius:'3px'}}>"{m.id}"</code> dentro de <code style={{background:'rgba(0,0,0,0.05)',padding:'1px 6px',borderRadius:'3px'}}>const LETRAS</code> (linha ~600).<br/>
+                      4. Substitui <code style={{background:'rgba(0,0,0,0.05)',padding:'1px 6px',borderRadius:'3px'}}>[ ]</code> por versos no formato:<br/>
+                      <code style={{display:'block',background:'rgba(0,0,0,0.05)',padding:'0.5rem',borderRadius:'4px',marginTop:'0.4rem',fontSize:'0.85rem'}}>
+                        {`"${m.id}": [`}<br/>
+                        &nbsp;&nbsp;{'{ fr: "verso em francês", pt: "tradução em português" },'}<br/>
+                        &nbsp;&nbsp;{'{ fr: "outro verso", pt: "outra tradução" },'}<br/>
+                        {`],`}
+                      </code>
+                      5. Recarrega esta página — vais ver a letra com 🔊 em cada linha.
+                    </div>
+                  )}
                 </div>
               )}
             </div>
